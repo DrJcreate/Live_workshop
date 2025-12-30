@@ -152,6 +152,4 @@ if current_session == "Session 4: Section F":
         save_answer(p_name, p_dept, p_loc, "Section F", "Contamination", f2_contam)
         save_answer(p_name, p_dept, p_loc, "Section F", "Vector Risk", f2_vector)
         st.success("Risk pathways recorded!")
-if current_session == "Session 3: Section C":
-    st.header("Section C: Placeholder")
-    st.write("Waiting for your Section C questions...")
+
