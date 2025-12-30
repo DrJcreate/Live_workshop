@@ -4,7 +4,7 @@ import psycopg2
 import os
 
 # --- CONFIGURATION ---
-ADMIN_PASSWORD = "workshop_admin_2025" 
+ADMIN_PASSWORD = "workshop_2025" 
 DATABASE_URL = os.environ.get('Database_URL')
 
 # --- DATABASE SETUP ---
