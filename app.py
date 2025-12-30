@@ -40,7 +40,7 @@ def save_answer(name, dept, loc, session, q, ans):
 
 # --- ADMIN SIDEBAR ---
 st.sidebar.title("🛠️ Workshop Controller")
-admin_pwd = st.sidebar.text_input("Admin Password", type="workshop_2025")
+admin_pwd = st.sidebar.text_input("Admin Password", type="password")
 current_session = "Registration"
 
 if admin_pwd == ADMIN_PASSWORD:
