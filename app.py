@@ -12,9 +12,12 @@ def init_db():
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
+        # ADD THIS LINE ONCE TO WIPE THE OLD STRUCTURE:
+        cur.execute("DROP TABLE IF EXISTS workshop_data") 
+        
         cur.execute('''CREATE TABLE IF NOT EXISTS workshop_data 
-             (id SERIAL PRIMARY KEY, 
-              name TEXT, dept TEXT, location_info TEXT,
+             (id SERIAL PRIMARY KEY, name TEXT, designation TEXT, dept TEXT, location_info TEXT,
+              email TEXT, phone TEXT, experience TEXT,
               session_name TEXT, question TEXT, answer TEXT)''')
         conn.commit()
         cur.close()
