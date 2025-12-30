@@ -133,7 +133,7 @@ if current_session == "Session 3: Section C":
             save_answer(p_name, p_dept, p_loc, "Section C", "Wildlife Obs", f"{w_spec}: {w_symp}")
 
 # --- SECTION D: CONTACT PATHWAYS ---
-if current_session == "Session 4: Section F":
+if current_session == "Session 4: Section D":
     st.header("Section F: Contact Pathways & Risk")
     
     st.subheader("F1. Direct Contact Pathways (Score 1-5)")
@@ -146,10 +146,10 @@ if current_session == "Session 4: Section F":
     f2_vector = st.slider("Tick/Mosquito density", 1, 5, 3)
 
     if st.button("Submit Section D Risk Scores"):
-        save_answer(p_name, p_dept, p_loc, "Section F", "Water Contact", f1_water)
-        save_answer(p_name, p_dept, p_loc, "Section F", "Grazing Contact", f1_grazing)
-        save_answer(p_name, p_dept, p_loc, "Section F", "Attack Contact", f1_attack)
-        save_answer(p_name, p_dept, p_loc, "Section F", "Contamination", f2_contam)
-        save_answer(p_name, p_dept, p_loc, "Section F", "Vector Risk", f2_vector)
+        save_answer(p_name, p_dept, p_loc, "Section D", "Water Contact", f1_water)
+        save_answer(p_name, p_dept, p_loc, "Section D", "Grazing Contact", f1_grazing)
+        save_answer(p_name, p_dept, p_loc, "Section D", "Attack Contact", f1_attack)
+        save_answer(p_name, p_dept, p_loc, "Section D", "Contamination", f2_contam)
+        save_answer(p_name, p_dept, p_loc, "Section D", "Vector Risk", f2_vector)
         st.success("Risk pathways recorded!")
 
