@@ -73,34 +73,37 @@ if st.button("Save Registration"):
 st.divider()
 
 # --- SECTION 2: SECTION B ---
+# --- SECTION 2: SECTION B ---
 if current_session == "Session 2: Section B":
-    st.header("Section B: Spatial Interface")
+    st.header("Section B: Spatial Interface & Contact Patterns")
     
-    # B2: Water Sources with "Other"
+    st.subheader("B1. Grazing Patterns")
+    b1_freq = st.radio("How frequently do livestock graze in/near forest areas?", 
+                       ["Daily", "4-6 times/week", "2-3 times/week", "Occasionally", "Rarely/Never"])
+    b1_dist = st.radio("Distance livestock typically graze from forest edge:", 
+                       ["Inside forest", "0-500m", "500m-1km", "1-2km", ">2km"])
+    b1_count = st.number_input("Approximate number of livestock entering forest daily:", min_value=0)
+
     st.subheader("B2. Water Source Sharing")
+    b2_share = st.radio("Do livestock and wildlife share water sources?", 
+                        ["Yes, regularly", "Yes, seasonally", "Occasionally", "Rarely", "No"])
     b2_types = st.multiselect("Type of shared water sources:", 
                               ["Natural ponds/lakes", "Streams/rivers", "Man-made water holes", "Agricultural wells", "Other"])
-    
-    b2_other_val = ""
-    if "Other" in b2_types:
-        b2_other_val = st.text_input("Please specify the 'Other' water source:")
 
-    # B3: Wildlife Species with "Other"
     st.subheader("B3. Wildlife Movement")
+    b3_freq = st.radio("Frequency of wildlife sightings in grazing areas:", 
+                       ["Daily", "Weekly", "Monthly", "Occasionally", "Rarely"])
     b3_species = st.multiselect("Wildlife species commonly observed near livestock:", 
                                 ["Wild boar", "Deer", "Gaur", "Nilgai", "Carnivores", "Other"])
-    
-    b3_other_val = ""
-    if "Other" in b3_species:
-        b3_other_val = st.text_input("Please specify the 'Other' species:")
 
     if st.button("Submit Section B"):
-        # We combine the "Other" text with the selection list
-        final_b2 = b2_types + ([f"Other: {b2_other_val}"] if b2_other_val else [])
-        final_b3 = b3_species + ([f"Other: {b3_other_val}"] if b3_other_val else [])
-        
-        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Water Types", final_b2)
-        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Species Observed", final_b3)
+        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Grazing Frequency", b1_freq)
+        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Grazing Distance", b1_dist)
+        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Livestock Count", b1_count)
+        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Water Sharing", b2_share)
+        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Water Types", b2_types)
+        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Wildlife Frequency", b3_freq)
+        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Species Observed", b3_species)
         st.success("Section B data recorded!")
 
 # --- SECTION 3: SECTION C (Placeholder) ---
