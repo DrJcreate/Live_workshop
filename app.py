@@ -5,7 +5,7 @@ import os
 
 # --- CONFIGURATION ---
 ADMIN_PASSWORD = "workshop_admin_2025" 
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = os.environ.get('Database_URL')
 
 # --- DATABASE SETUP ---
 def init_db():
@@ -40,7 +40,7 @@ def save_answer(name, dept, loc, session, q, ans):
 
 # --- ADMIN SIDEBAR ---
 st.sidebar.title("🛠️ Workshop Controller")
-admin_pwd = st.sidebar.text_input("Admin Password", type="password")
+admin_pwd = st.sidebar.text_input("Admin Password", type="workshop_2025")
 current_session = "Registration"
 
 if admin_pwd == ADMIN_PASSWORD:
