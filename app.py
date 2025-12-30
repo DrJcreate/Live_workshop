@@ -5,16 +5,15 @@ import os
 
 # --- CONFIGURATION ---
 ADMIN_PASSWORD = "workshop_admin_2025" 
-DATABASE_URL = os.environ.get('Database_URL')
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
 # --- DATABASE SETUP ---
 def init_db():
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
-        # ADD THIS LINE ONCE TO WIPE THE OLD STRUCTURE:
-        cur.execute("DROP TABLE IF EXISTS workshop_data") 
-        
+        # NOTE: If you get a 'column' error, uncomment the line below for ONE deploy to reset
+        # cur.execute("DROP TABLE IF EXISTS workshop_data") 
         cur.execute('''CREATE TABLE IF NOT EXISTS workshop_data 
              (id SERIAL PRIMARY KEY, name TEXT, designation TEXT, dept TEXT, location_info TEXT,
               email TEXT, phone TEXT, experience TEXT,
@@ -40,23 +39,22 @@ def save_answer(name, dept, loc, session, q, ans):
         st.error(f"Error saving data: {e}")
 
 # --- ADMIN SIDEBAR ---
-st.sidebar.title("🛠️ Admin Control")
+st.sidebar.title("🛠️ Workshop Controller")
 admin_pwd = st.sidebar.text_input("Admin Password", type="password")
 current_session = "Registration"
+
 if admin_pwd == ADMIN_PASSWORD:
     st.sidebar.success("Logged In")
-    current_session = st.sidebar.radio("Active Session", ["Registration", "Section B: Spatial", "Section C: Disease", "Section D: Contact", "Section E: Risk", "Section F: Mitigation", "Section G: Surveillance"])
+    current_session = st.sidebar.radio("Active Session", 
+        ["Registration", "Section B: Spatial", "Section C: Disease", "Section D: Contact", "Section E: Risk", "Section F: Mitigation", "Section G: Surveillance"])
     if st.sidebar.button("Download CSV"):
         conn = psycopg2.connect(DATABASE_URL)
         df = pd.read_sql_query("SELECT * FROM workshop_data", conn)
         conn.close()
-        st.sidebar.download_button("Download Results", df.to_csv(index=False), "workshop_data.csv")
+        st.sidebar.download_button("Download Results", df.to_csv(index=False), "workshop_results.csv")
 
-# --- PARTICIPANT UI ---
+# --- MAIN UI ---
 st.title("🌲 Wildlife-Livestock Interface Workshop")
-
-# --- SECTION 1: REGISTRATION ---
-st.header("Step 1: Registration")
 p_name = st.text_input("Full Name")
 p_dept = st.selectbox("Select Department", ["Select...", "Forest Department", "Animal Husbandry Department"])
 
@@ -64,152 +62,98 @@ p_loc_detail = ""
 if p_dept == "Forest Department":
     p_loc_detail = st.selectbox("Select Tiger Reserve/Safari", ["Kanha", "Pench", "Panna", "Satpura", "Ratapani", "Bandhavgarh", "Sanjay", "Van Vihar", "MMSJ", "White Tiger Safari"])
 elif p_dept == "Animal Husbandry Department":
-    dist = st.text_input("District")
-    blk = st.text_input("Block")
-    inst = st.text_input("Institution")
-    p_loc_detail = f"{dist} | {blk} | {inst}"
-
-if st.button("Save Registration"):
-    save_answer(p_name, p_dept, p_loc_detail, "Registration", "Check-in", "Active")
-    st.success("Registration saved!")
+    dist, blk = st.columns(2)
+    with dist: d_val = st.text_input("District")
+    with blk: b_val = st.text_input("Block")
+    i_val = st.text_input("Institution")
+    p_loc_detail = f"{d_val} | {b_val} | {i_val}"
 
 st.divider()
 
-# --- SECTION 2: SECTION B ---
-# --- SECTION 2: SECTION B ---
-if current_session == "Session 2: Section B":
-    st.header("Section B: Spatial Interface & Contact Patterns")
+# --- REGISTRATION ---
+if current_session == "Registration":
+    st.header("Step 1: Registration")
+    p_desig = st.text_input("Designation")
+    p_email = st.text_input("Email")
+    p_phone = st.text_input("Phone")
+    p_exp = st.text_input("Years of Experience")
+    if st.button("Save Registration"):
+        save_answer(p_name, p_dept, p_loc_detail, "Registration", "Profile", f"{p_desig}, {p_email}, {p_phone}, {p_exp}")
+        st.success("Registration Saved!")
+
+# --- SECTION B: SPATIAL ---
+elif current_session == "Section B: Spatial":
+    st.header("Section B: Spatial Interface")
+    b1_freq = st.radio("Livestock grazing frequency near forest?", ["Daily", "4-6 times/week", "2-3 times/week", "Occasionally", "Rarely/Never"])
+    b1_dist = st.radio("Distance from forest edge?", ["Inside forest", "0-500m", "500m-1km", "1-2km", ">2km"])
+    b2_share = st.radio("Do livestock and wildlife share water sources?", ["Yes, regularly", "Yes, seasonally", "Occasionally", "Rarely", "No"])
+    b2_types = st.multiselect("Types of shared water sources:", ["Natural ponds", "Streams/Rivers", "Man-made holes", "Agricultural wells", "Other"])
+    if "Other" in b2_types:
+        b2_other = st.text_input("Specify other water source:")
     
-    st.subheader("B1. Grazing Patterns")
-    b1_freq = st.radio("How frequently do livestock graze in/near forest areas?", 
-                       ["Daily", "4-6 times/week", "2-3 times/week", "Occasionally", "Rarely/Never"])
-    b1_dist = st.radio("Distance livestock typically graze from forest edge:", 
-                       ["Inside forest", "0-500m", "500m-1km", "1-2km", ">2km"])
-    b1_count = st.number_input("Approximate number of livestock entering forest daily:", min_value=0)
-
-    st.subheader("B2. Water Source Sharing")
-    b2_share = st.radio("Do livestock and wildlife share water sources?", 
-                        ["Yes, regularly", "Yes, seasonally", "Occasionally", "Rarely", "No"])
-    b2_types = st.multiselect("Type of shared water sources:", 
-                              ["Natural ponds/lakes", "Streams/rivers", "Man-made water holes", "Agricultural wells", "Other"])
-
-    st.subheader("B3. Wildlife Movement")
-    b3_freq = st.radio("Frequency of wildlife sightings in grazing areas:", 
-                       ["Daily", "Weekly", "Monthly", "Occasionally", "Rarely"])
-    b3_species = st.multiselect("Wildlife species commonly observed near livestock:", 
-                                ["Wild boar", "Deer", "Gaur", "Nilgai", "Carnivores", "Other"])
-
-    if st.button("Submit Section B"):
-        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Grazing Frequency", b1_freq)
-        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Grazing Distance", b1_dist)
-        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Livestock Count", b1_count)
+    if st.button("Save Section B"):
+        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Grazing Freq", b1_freq)
         save_answer(p_name, p_dept, p_loc_detail, "Section B", "Water Sharing", b2_share)
         save_answer(p_name, p_dept, p_loc_detail, "Section B", "Water Types", b2_types)
-        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Wildlife Frequency", b3_freq)
-        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Species Observed", b3_species)
-        st.success("Section B data recorded!")
-        st.write("Section B is active. Please enter grazing and water data.")
+        st.success("Section B Recorded!")
 
-# --- SECTION C: DISEASE OCCURRENCE ---
-if current_session == "Session 3: Section C":
-    st.header("Section C: Disease Occurrence & Surveillance")
-    
+# --- SECTION C: DISEASE ---
+elif current_session == "Section C: Disease":
+    st.header("Section C: Disease Occurrence (Past 3 Years)")
     diseases = ["FMD", "Brucellosis", "Bovine TB", "Anthrax", "Rabies", "PPR", "HS", "Parasitic"]
-    
-    for dis in diseases:
-        with st.expander(f"📋 {dis} Details"):
-            occ = st.radio(f"Occurred (Past 3 years)?", ["No", "Yes"], key=f"occ_{dis}")
+    for d in diseases:
+        with st.expander(f"📋 {d} Details"):
+            occ = st.radio(f"Occurred?", ["No", "Yes"], key=d)
             if occ == "Yes":
-                spec = st.text_input("Species affected", key=f"sp_{dis}")
-                cases = st.text_input("Approx. cases", key=f"cs_{dis}")
-                detail = st.text_input("Season / Diagnostic Confirm", key=f"det_{dis}")
-                if st.button(f"Save {dis} Data"):
-                    save_answer(p_name, p_dept, p_loc, "Section C", f"{dis}_Data", f"Species:{spec}, Cases:{cases}, Detail:{detail}")
-                    st.toast(f"Saved {dis}")
+                sp = st.text_input("Species affected", key=f"s_{d}")
+                cs = st.text_input("Approx. cases", key=f"c_{d}")
+                if st.button(f"Save {d} Data"):
+                    save_answer(p_name, p_dept, p_loc_detail, "Section C", d, f"Spec:{sp}, Cases:{cs}")
+                    st.toast(f"{d} data saved!")
 
-    st.subheader("C2. Wildlife Disease Observations")
-    wild_obs = st.radio("Observed sick wildlife in past 3 years?", ["No", "Yes"])
-    if wild_obs == "Yes":
-        w_spec = st.text_input("Wildlife Species")
-        w_symp = st.text_area("Symptoms & Outcome")
-        if st.button("Save Wildlife Observation"):
-            save_answer(p_name, p_dept, p_loc, "Section C", "Wildlife Obs", f"{w_spec}: {w_symp}")
-
-# --- SECTION D: CONTACT PATHWAYS (SESSION 4) ---
-# Ensure this name matches EXACTLY with the radio button in the sidebar
-if current_session == "Section D/F: Contact":
-    st.header("Section D: Contact Pathways & Risk")
-    
-    st.subheader("D1. Direct Contact Pathways (Score 1-5)")
+# --- SECTION D: CONTACT ---
+elif current_session == "Section D: Contact":
+    st.header("Section D: Contact Pathways (Score 1-5)")
     f1_water = st.slider("Contact at water sources", 1, 5, 3)
     f1_grazing = st.slider("Contact at grazing areas", 1, 5, 3)
-    f1_attack = st.slider("Contact during wildlife attacks", 1, 5, 3)
-    
-    st.subheader("D2. Indirect Pathways (Score 1-5)")
-    f2_contam = st.slider("Pasture/Water contamination", 1, 5, 3)
     f2_vector = st.slider("Tick/Mosquito density", 1, 5, 3)
+    if st.button("Submit Scores"):
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Water Risk", f1_water)
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Vector Risk", f2_vector)
+        st.success("Risk Scores Saved!")
 
-    if st.button("Submit Section D Risk Scores"):
-        save_answer(p_name, p_dept, p_loc, "Section D", "Water Contact", f1_water)
-        save_answer(p_name, p_dept, p_loc, "Section D", "Grazing Contact", f1_grazing)
-        save_answer(p_name, p_dept, p_loc, "Section D", "Attack Contact", f1_attack)
-        save_answer(p_name, p_dept, p_loc, "Section D", "Contamination", f2_contam)
-        save_answer(p_name, p_dept, p_loc, "Section D", "Vector Risk", f2_vector)
-        st.success("Section D risk pathways recorded!")
-
-# --- SECTION E: RISK FACTORS ---
-if current_session == "Section E: Risk":
+# --- SECTION E: RISK ---
+elif current_session == "Section E: Risk":
     st.header("Section E: Risk Factor Assessment")
-    st.subheader("Vaccination Coverage (%)")
-    fmd_v = st.select_slider("FMD Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
-    bru_v = st.select_slider("Brucellosis Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
-    hs_v = st.select_slider("HS Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
-    bq_v = st.select_slider("BQ Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
-    lsd_v = st.select_slider("LSD Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
-    
-    st.subheader("Practices")
-    quarantine = st.radio("Quarantine for new livestock:", ["Always", "Usually", "Sometimes", "Rarely", "Never"])
+    fmd_v = st.select_slider("FMD Vaccination Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
+    quarantine = st.radio("Quarantine practices for new livestock:", ["Always", "Usually", "Sometimes", "Rarely", "Never"])
     carcass = st.radio("Carcass Disposal:", ["Proper burial/burning", "Burial without lime", "Left in fields", "Dumped near forest"])
-    
-    if st.button("Save Risk Factors"):
-        save_answer(p_name, p_dept, p_loc, "Section E", "FMD Vac", fmd_v)
-        save_answer(p_name, p_dept, p_loc, "Section E", "Carcass", carcass)
-        st.success("Section E saved!")
+    if st.button("Save Section E"):
+        save_answer(p_name, p_dept, p_loc_detail, "Section E", "Vaccination", fmd_v)
+        save_answer(p_name, p_dept, p_loc_detail, "Section E", "Carcass Disposal", carcass)
+        st.success("Risk Factors Saved!")
 
 # --- SECTION F: MITIGATION ---
-if current_session == "Section F: Mitigation":
+elif current_session == "Section F: Mitigation":
     st.header("Section F: Mitigation & Recommendations")
-    interventions = st.multiselect("Existing Measures:", ["Vaccination", "Movement Restrictions", "Awareness", "Coordination", "Monitoring"])
-    eff = st.radio("Effectiveness:", ["Highly", "Moderately", "Minimally", "Not"])
-    
-    st.subheader("Suggested Interventions")
-    rank1 = st.text_input("Priority 1")
-    rank2 = st.text_input("Priority 2")
-    
-    if st.button("Submit Recommendations"):
-        save_answer(p_name, p_dept, p_loc, "Section F", "Measures", interventions)
-        save_answer(p_name, p_dept, p_loc, "Section F", "Rank 1", rank1)
-        st.success("Section F saved!")
+    interv = st.multiselect("Existing disease control measures:", ["Vaccination", "Movement restrictions", "Awareness programs", "Forest dept coordination", "Wildlife monitoring"])
+    eff = st.radio("Effectiveness of current measures:", ["Highly", "Moderately", "Minimally", "Not"])
+    rank1 = st.text_input("Priority Intervention 1")
+    rank2 = st.text_input("Priority Intervention 2")
+    if st.button("Save Recommendations"):
+        save_answer(p_name, p_dept, p_loc_detail, "Section F", "Measures", interv)
+        save_answer(p_name, p_dept, p_loc_detail, "Section F", "Priority 1", rank1)
+        st.success("Recommendations Saved!")
 
 # --- SECTION G: SURVEILLANCE ---
-if current_session == "Section G: Surveillance":
+elif current_session == "Section G: Surveillance":
     st.header("Section G: Surveillance & Diagnostics")
-    
-    st.subheader("G1. Diagnostic Infrastructure")
-    diag = st.radio("Availability of diagnostic facilities:", ["Within district", "Neighboring district", "Regional laboratory", "None"])
-    time_diag = st.number_input("Average time for disease confirmation (days):", min_value=0)
-    tests = st.multiselect("Tests available locally:", ["ELISA", "PCR", "Culture", "Postmortem", "Rapid test kits", "Other"])
-
-    st.subheader("G2. Surveillance System")
-    # Added the missing questions below
+    diag = st.radio("Availability of diagnostic facilities:", ["Within district", "Neighboring district", "Regional lab", "None"])
+    time_diag = st.number_input("Average time for confirmation (days):", min_value=0)
     mechanism = st.radio("Disease reporting mechanism:", ["Active surveillance", "Passive surveillance", "No formal system"])
     frequency = st.radio("Frequency of surveillance activities:", ["Weekly", "Monthly", "Quarterly", "Only during outbreaks", "None"])
-
-    if st.button("Submit Final Section"):
-        save_answer(p_name, p_dept, p_loc, "Section G", "Facility", diag)
-        save_answer(p_name, p_dept, p_loc, "Section G", "Conf Time", time_diag)
-        save_answer(p_name, p_dept, p_loc, "Section G", "Tests", tests)
-        save_answer(p_name, p_dept, p_loc, "Section G", "Mechanism", mechanism)
-        save_answer(p_name, p_dept, p_loc, "Section G", "Frequency", frequency)
+    if st.button("Finish Workshop"):
+        save_answer(p_name, p_dept, p_loc_detail, "Section G", "Diagnostics", diag)
+        save_answer(p_name, p_dept, p_loc_detail, "Section G", "Mechanism", mechanism)
         st.balloons()
-        st.success("Workshop complete! Thank you for your valuable input.")
+        st.success("All data submitted. Thank you!")
