@@ -6,7 +6,7 @@ import os
 # --- CONFIGURATION ---
 ADMIN_PASSWORD = "forest_admin_2025" 
 # This pulls the database link from Render's settings automatically
-DB_URL = os.environ.get('DATABASE_URL')
+DB_URL = os.environ.get('postgresql://workshop_db_bgad_user:zD5HloYoxWmx6SOB2axxlM4LnTQmC9bE@dpg-d59pfk0gjchc73asifj0-a/workshop_db_bgad')
 
 # --- DATABASE SETUP (Postgres) ---
 def init_db():
