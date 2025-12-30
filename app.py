@@ -1,9 +1,6 @@
-"Hello World"
-import streamlit as st
-st.title("My Workshop App is Live!")
 import streamlit as st
 import pandas as pd
-import sqlite3 # Using SQLite for this version to keep it simple for a novice
+import sqlite3 
 
 # --- CONFIGURATION ---
 ADMIN_PASSWORD = "forest_admin_2025" # Change this to your secret password
