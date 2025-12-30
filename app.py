@@ -132,16 +132,17 @@ if current_session == "Session 3: Section C":
         if st.button("Save Wildlife Observation"):
             save_answer(p_name, p_dept, p_loc, "Section C", "Wildlife Obs", f"{w_spec}: {w_symp}")
 
-# --- SECTION D: CONTACT PATHWAYS ---
-if current_session == "Session 4: Section D":
-    st.header("Section F: Contact Pathways & Risk")
+# --- SECTION D: CONTACT PATHWAYS (SESSION 4) ---
+# Ensure this name matches EXACTLY with the radio button in the sidebar
+if current_session == "Section D/F: Contact":
+    st.header("Section D: Contact Pathways & Risk")
     
-    st.subheader("F1. Direct Contact Pathways (Score 1-5)")
+    st.subheader("D1. Direct Contact Pathways (Score 1-5)")
     f1_water = st.slider("Contact at water sources", 1, 5, 3)
     f1_grazing = st.slider("Contact at grazing areas", 1, 5, 3)
     f1_attack = st.slider("Contact during wildlife attacks", 1, 5, 3)
     
-    st.subheader("F2. Indirect Pathways (Score 1-5)")
+    st.subheader("D2. Indirect Pathways (Score 1-5)")
     f2_contam = st.slider("Pasture/Water contamination", 1, 5, 3)
     f2_vector = st.slider("Tick/Mosquito density", 1, 5, 3)
 
@@ -151,5 +152,61 @@ if current_session == "Session 4: Section D":
         save_answer(p_name, p_dept, p_loc, "Section D", "Attack Contact", f1_attack)
         save_answer(p_name, p_dept, p_loc, "Section D", "Contamination", f2_contam)
         save_answer(p_name, p_dept, p_loc, "Section D", "Vector Risk", f2_vector)
-        st.success("Risk pathways recorded!")
+        st.success("Section D risk pathways recorded!")
 
+# --- SECTION E: RISK FACTORS ---
+if current_session == "Section E: Risk":
+    st.header("Section E: Risk Factor Assessment")
+    st.subheader("Vaccination Coverage (%)")
+    fmd_v = st.select_slider("FMD Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
+    bru_v = st.select_slider("Brucellosis Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
+    hs_v = st.select_slider("HS Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
+    bq_v = st.select_slider("BQ Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
+    lsd_v = st.select_slider("LSD Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
+    
+    st.subheader("Practices")
+    quarantine = st.radio("Quarantine for new livestock:", ["Always", "Usually", "Sometimes", "Rarely", "Never"])
+    carcass = st.radio("Carcass Disposal:", ["Proper burial/burning", "Burial without lime", "Left in fields", "Dumped near forest"])
+    
+    if st.button("Save Risk Factors"):
+        save_answer(p_name, p_dept, p_loc, "Section E", "FMD Vac", fmd_v)
+        save_answer(p_name, p_dept, p_loc, "Section E", "Carcass", carcass)
+        st.success("Section E saved!")
+
+# --- SECTION F: MITIGATION ---
+if current_session == "Section F: Mitigation":
+    st.header("Section F: Mitigation & Recommendations")
+    interventions = st.multiselect("Existing Measures:", ["Vaccination", "Movement Restrictions", "Awareness", "Coordination", "Monitoring"])
+    eff = st.radio("Effectiveness:", ["Highly", "Moderately", "Minimally", "Not"])
+    
+    st.subheader("Suggested Interventions")
+    rank1 = st.text_input("Priority 1")
+    rank2 = st.text_input("Priority 2")
+    
+    if st.button("Submit Recommendations"):
+        save_answer(p_name, p_dept, p_loc, "Section F", "Measures", interventions)
+        save_answer(p_name, p_dept, p_loc, "Section F", "Rank 1", rank1)
+        st.success("Section F saved!")
+
+# --- SECTION G: SURVEILLANCE ---
+if current_session == "Section G: Surveillance":
+    st.header("Section G: Surveillance & Diagnostics")
+    
+    st.subheader("G1. Diagnostic Infrastructure")
+    diag = st.radio("Availability of diagnostic facilities:", ["Within district", "Neighboring district", "Regional laboratory", "None"])
+    time_diag = st.number_input("Average time for disease confirmation (days):", min_value=0)
+    tests = st.multiselect("Tests available locally:", ["ELISA", "PCR", "Culture", "Postmortem", "Rapid test kits", "Other"])
+
+    st.subheader("G2. Surveillance System")
+    # Added the missing questions below
+    mechanism = st.radio("Disease reporting mechanism:", ["Active surveillance", "Passive surveillance", "No formal system"])
+    frequency = st.radio("Frequency of surveillance activities:", ["Weekly", "Monthly", "Quarterly", "Only during outbreaks", "None"])
+
+    if st.button("Submit Final Section"):
+        save_answer(p_name, p_dept, p_loc, "Section G", "Facility", diag)
+        save_answer(p_name, p_dept, p_loc, "Section G", "Conf Time", time_diag)
+        save_answer(p_name, p_dept, p_loc, "Section G", "Tests", tests)
+        save_answer(p_name, p_dept, p_loc, "Section G", "Mechanism", mechanism)
+        save_answer(p_name, p_dept, p_loc, "Section G", "Frequency", frequency)
+        st.balloons()
+        st.success("Workshop complete! Thank you for your valuable input.")
