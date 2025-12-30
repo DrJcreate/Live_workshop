@@ -145,7 +145,7 @@ if current_session == "Session 4: Section F":
     f2_contam = st.slider("Pasture/Water contamination", 1, 5, 3)
     f2_vector = st.slider("Tick/Mosquito density", 1, 5, 3)
 
-    if st.button("Submit Section F Risk Scores"):
+    if st.button("Submit Section D Risk Scores"):
         save_answer(p_name, p_dept, p_loc, "Section F", "Water Contact", f1_water)
         save_answer(p_name, p_dept, p_loc, "Section F", "Grazing Contact", f1_grazing)
         save_answer(p_name, p_dept, p_loc, "Section F", "Attack Contact", f1_attack)
