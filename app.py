@@ -105,8 +105,53 @@ if current_session == "Session 2: Section B":
         save_answer(p_name, p_dept, p_loc_detail, "Section B", "Wildlife Frequency", b3_freq)
         save_answer(p_name, p_dept, p_loc_detail, "Section B", "Species Observed", b3_species)
         st.success("Section B data recorded!")
+        st.write("Section B is active. Please enter grazing and water data.")
 
-# --- SECTION 3: SECTION C (Placeholder) ---
+# --- SECTION C: DISEASE OCCURRENCE ---
+if current_session == "Session 3: Section C":
+    st.header("Section C: Disease Occurrence & Surveillance")
+    
+    diseases = ["FMD", "Brucellosis", "Bovine TB", "Anthrax", "Rabies", "PPR", "HS", "Parasitic"]
+    
+    for dis in diseases:
+        with st.expander(f"📋 {dis} Details"):
+            occ = st.radio(f"Occurred (Past 3 years)?", ["No", "Yes"], key=f"occ_{dis}")
+            if occ == "Yes":
+                spec = st.text_input("Species affected", key=f"sp_{dis}")
+                cases = st.text_input("Approx. cases", key=f"cs_{dis}")
+                detail = st.text_input("Season / Diagnostic Confirm", key=f"det_{dis}")
+                if st.button(f"Save {dis} Data"):
+                    save_answer(p_name, p_dept, p_loc, "Section C", f"{dis}_Data", f"Species:{spec}, Cases:{cases}, Detail:{detail}")
+                    st.toast(f"Saved {dis}")
+
+    st.subheader("C2. Wildlife Disease Observations")
+    wild_obs = st.radio("Observed sick wildlife in past 3 years?", ["No", "Yes"])
+    if wild_obs == "Yes":
+        w_spec = st.text_input("Wildlife Species")
+        w_symp = st.text_area("Symptoms & Outcome")
+        if st.button("Save Wildlife Observation"):
+            save_answer(p_name, p_dept, p_loc, "Section C", "Wildlife Obs", f"{w_spec}: {w_symp}")
+
+# --- SECTION D: CONTACT PATHWAYS ---
+if current_session == "Session 4: Section F":
+    st.header("Section F: Contact Pathways & Risk")
+    
+    st.subheader("F1. Direct Contact Pathways (Score 1-5)")
+    f1_water = st.slider("Contact at water sources", 1, 5, 3)
+    f1_grazing = st.slider("Contact at grazing areas", 1, 5, 3)
+    f1_attack = st.slider("Contact during wildlife attacks", 1, 5, 3)
+    
+    st.subheader("F2. Indirect Pathways (Score 1-5)")
+    f2_contam = st.slider("Pasture/Water contamination", 1, 5, 3)
+    f2_vector = st.slider("Tick/Mosquito density", 1, 5, 3)
+
+    if st.button("Submit Section F Risk Scores"):
+        save_answer(p_name, p_dept, p_loc, "Section F", "Water Contact", f1_water)
+        save_answer(p_name, p_dept, p_loc, "Section F", "Grazing Contact", f1_grazing)
+        save_answer(p_name, p_dept, p_loc, "Section F", "Attack Contact", f1_attack)
+        save_answer(p_name, p_dept, p_loc, "Section F", "Contamination", f2_contam)
+        save_answer(p_name, p_dept, p_loc, "Section F", "Vector Risk", f2_vector)
+        st.success("Risk pathways recorded!")
 if current_session == "Session 3: Section C":
     st.header("Section C: Placeholder")
     st.write("Waiting for your Section C questions...")
