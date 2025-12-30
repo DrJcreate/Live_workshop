@@ -6,12 +6,12 @@ import os
 # --- CONFIGURATION ---
 ADMIN_PASSWORD = "forest_admin_2025" 
 # This pulls the database link from Render's settings automatically
-DB_URL = os.environ.get('postgresql://workshop_db_bgad_user:zD5HloYoxWmx6SOB2axxlM4LnTQmC9bE@dpg-d59pfk0gjchc73asifj0-a/workshop_db_bgad')
+Database_URL = os.environ.get('postgresql://workshop_db_bgad_user:zD5HloYoxWmx6SOB2axxlM4LnTQmC9bE@dpg-d59pfk0gjchc73asifj0-a/workshop_db_bgad')
 
 # --- DATABASE SETUP (Postgres) ---
 def init_db():
     try:
-        conn = psycopg2.connect(DB_URL)
+        conn = psycopg2.connect(Database_URL)
         cur = conn.cursor()
         cur.execute('''CREATE TABLE IF NOT EXISTS workshop_data 
              (id SERIAL PRIMARY KEY, 
@@ -26,7 +26,7 @@ def init_db():
 init_db()
 
 def save_answer(name, dept, loc, session, q, ans):
-    conn = psycopg2.connect(DB_URL)
+    conn = psycopg2.connect(Database_URL)
     cur = conn.cursor()
     cur.execute("INSERT INTO workshop_data (name, dept, location, session_name, question, answer) VALUES (%s,%s,%s,%s,%s,%s)",
                 (name, dept, loc, session, q, str(ans)))
@@ -44,7 +44,7 @@ if admin_pwd == ADMIN_PASSWORD:
     current_session = st.sidebar.radio("Active Session", ["Registration", "Session 2: Section B"])
     
     if st.sidebar.button("Download CSV"):
-        conn = psycopg2.connect(DB_URL)
+        conn = psycopg2.connect(Database_URL)
         df = pd.read_sql_query("SELECT * FROM workshop_data", conn)
         conn.close()
         st.sidebar.download_button("Download Results", df.to_csv(index=False), "workshop_data.csv")
