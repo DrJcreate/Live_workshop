@@ -12,7 +12,6 @@ def init_db():
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
-        # NOTE: If you get a 'column' error, uncomment the line below for ONE deploy to reset
         # cur.execute("DROP TABLE IF EXISTS workshop_data") 
         cur.execute('''CREATE TABLE IF NOT EXISTS workshop_data 
              (id SERIAL PRIMARY KEY, name TEXT, designation TEXT, dept TEXT, location_info TEXT,
@@ -81,20 +80,37 @@ if current_session == "Registration":
         save_answer(p_name, p_dept, p_loc_detail, "Registration", "Profile", f"{p_desig}, {p_email}, {p_phone}, {p_exp}")
         st.success("Registration Saved!")
 
-# --- SECTION B: SPATIAL ---
+# --- SECTION B: SPATIAL INTERFACE ---
 elif current_session == "Section B: Spatial":
-    st.header("Section B: Spatial Interface")
-    b1_freq = st.radio("Livestock grazing frequency near forest?", ["Daily", "4-6 times/week", "2-3 times/week", "Occasionally", "Rarely/Never"])
-    b1_dist = st.radio("Distance from forest edge?", ["Inside forest", "0-500m", "500m-1km", "1-2km", ">2km"])
-    b2_share = st.radio("Do livestock and wildlife share water sources?", ["Yes, regularly", "Yes, seasonally", "Occasionally", "Rarely", "No"])
-    b2_types = st.multiselect("Types of shared water sources:", ["Natural ponds", "Streams/Rivers", "Man-made holes", "Agricultural wells", "Other"])
-    if "Other" in b2_types:
-        b2_other = st.text_input("Specify other water source:")
+    st.header("Section B: Spatial Interface & Contact Patterns")
     
+    st.subheader("B1. Grazing Patterns")
+    b1_freq = st.radio("How frequently do livestock graze in/near forest areas?", 
+                       ["Daily", "4-6 times/week", "2-3 times/week", "Occasionally", "Rarely/Never"])
+    b1_dist = st.radio("Distance livestock typically graze from forest edge:", 
+                       ["Inside forest", "0-500m", "500m-1km", "1-2km", ">2km"])
+    b1_count = st.number_input("Approximate number of livestock entering forest daily:", min_value=0)
+
+    st.subheader("B2. Water Source Sharing")
+    b2_share = st.radio("Do livestock and wildlife share water sources?", 
+                        ["Yes, regularly", "Yes, seasonally", "Occasionally", "Rarely", "No"])
+    b2_types = st.multiselect("Type of shared water sources (check all that apply):", 
+                              ["Natural ponds/lakes", "Streams/rivers", "Man-made water holes", "Agricultural wells", "Other"])
+
+    st.subheader("B3. Wildlife Movement into Agricultural Areas")
+    b3_freq = st.radio("Frequency of wildlife sightings in livestock grazing areas:", 
+                       ["Daily", "Weekly", "Monthly", "Occasionally", "Rarely"])
+    
+    b3_species = st.multiselect("Wildlife species commonly observed near livestock (check all that apply):", 
+                                ["Wild boar", "Deer (Chital/Sambar)", "Gaur/Wild buffalo", "Nilgai", "Carnivores (Tiger/Leopard/Wild dogs)", "Other"])
+    
+    if "Other" in b3_species:
+        b3_other = st.text_input("Please specify other wildlife species observed:")
+
     if st.button("Save Section B"):
         save_answer(p_name, p_dept, p_loc_detail, "Section B", "Grazing Freq", b1_freq)
-        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Water Sharing", b2_share)
-        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Water Types", b2_types)
+        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Sighting Freq", b3_freq)
+        save_answer(p_name, p_dept, p_loc_detail, "Section B", "Species Observed", b3_species)
         st.success("Section B Recorded!")
 
 # --- SECTION C: DISEASE ---
@@ -111,17 +127,55 @@ elif current_session == "Section C: Disease":
                     save_answer(p_name, p_dept, p_loc_detail, "Section C", d, f"Spec:{sp}, Cases:{cs}")
                     st.toast(f"{d} data saved!")
 
-# --- SECTION D: CONTACT ---
+# --- SECTION D: CONTACT PATHWAYS & PREDATION ---
 elif current_session == "Section D: Contact":
-    st.header("Section D: Contact Pathways (Score 1-5)")
-    f1_water = st.slider("Contact at water sources", 1, 5, 3)
-    f1_grazing = st.slider("Contact at grazing areas", 1, 5, 3)
-    f2_vector = st.slider("Tick/Mosquito density", 1, 5, 3)
-    if st.button("Submit Scores"):
-        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Water Risk", f1_water)
-        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Vector Risk", f2_vector)
-        st.success("Risk Scores Saved!")
+    st.header("Section D: Contact Pathways & Predation")
+    
+    # 1. Physical Contact (Missing Questions Added)
+    st.subheader("D1. Physical Contact Pathways (Score 1-5)")
+    st.write("Rate the frequency of physical contact between livestock and wildlife:")
+    d1_phys_water = st.slider("At water sources", 1, 5, 3, key="d1_w")
+    d1_phys_grazing = st.slider("At grazing areas", 1, 5, 3, key="d1_g")
+    d1_phys_attack = st.slider("During wildlife attacks on livestock", 1, 5, 3, key="d1_a")
 
+    # 2. Wildlife Predation
+    st.subheader("D2. Wildlife Predation")
+    pred_incidents = st.radio("Number of wildlife predation incidents per month:", ["1-2", "3-5", "More than 10"])
+    pred_species = st.multiselect("Most affected species:", ["Cattle", "Buffalo", "Goat", "Other"])
+    
+    # 3. Environmental/Indirect Contact (Missing Questions Added)
+    st.subheader("D3. Indirect Contact & Environmental Contamination (Score 1-5)")
+    st.write("Rate the level of risk for environmental contamination:")
+    d3_env_water = st.slider("Shared water sources", 1, 5, 3, key="d3_w")
+    d3_env_pasture = st.slider("Pasture contamination", 1, 5, 3, key="d3_p")
+    d3_env_feeding = st.slider("Shared feeding areas", 1, 5, 3, key="d3_f")
+
+    # 4. Vectors & Fomites
+    st.subheader("D4. Vectors & Fomite Transmission (Score 1-5)")
+    tick_density = st.slider("Tick density in shared areas", 1, 5, 3)
+    mosq_density = st.slider("Mosquito/fly abundance", 1, 5, 3)
+    herder_fodder = st.slider("Risk: Herders entering forest for fodder", 1, 5, 3)
+    forest_products = st.slider("Risk: Collection of forest products", 1, 5, 3)
+
+    if st.button("Submit Section D"):
+        # Physical Contact
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Phys Contact: Water", d1_phys_water)
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Phys Contact: Grazing", d1_phys_grazing)
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Phys Contact: Attack", d1_phys_attack)
+        # Predation
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Predation Incidents", pred_incidents)
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Affected Species", pred_species)
+        # Indirect
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Env: Shared Water", d3_env_water)
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Env: Pasture", d3_env_pasture)
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Env: Feeding Areas", d3_env_feeding)
+        # Vectors/Fomites
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Tick Density", tick_density)
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Mosquito Abundance", mosq_density)
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Herder Fodder Risk", herder_fodder)
+        save_answer(p_name, p_dept, p_loc_detail, "Section D", "Forest Product Risk", forest_products)
+        
+        st.success("All Section D contact and risk pathways recorded!")
 # --- SECTION E: RISK ---
 elif current_session == "Section E: Risk":
     st.header("Section E: Risk Factor Assessment")
@@ -137,17 +191,31 @@ elif current_session == "Section E: Risk":
         save_answer(p_name, p_dept, p_loc_detail, "Section E", "Carcass Disposal", carcass)
         st.success("Risk Factors Saved!")
 
-# --- SECTION F: MITIGATION ---
+# --- SECTION F: MITIGATION & RECOMMENDATIONS ---
 elif current_session == "Section F: Mitigation":
-    st.header("Section F: Mitigation & Recommendations")
-    interv = st.multiselect("Existing disease control measures:", ["Vaccination", "Movement restrictions", "Awareness programs", "Forest dept coordination", "Wildlife monitoring"])
-    eff = st.radio("Effectiveness of current measures:", ["Highly", "Moderately", "Minimally", "Not"])
+    st.header("Section F: Mitigation Measures & Recommendations")
+    
+    st.subheader("F1. Current Interventions")
+    interv = st.multiselect("Existing disease control measures (check all that apply):", 
+                            ["Regular vaccination campaigns", "Movement restrictions during outbreaks", "Awareness programs for herders", "Forest department coordination", "Wildlife health monitoring", "Other"])
+    eff = st.radio("Effectiveness of current measures:", ["Highly effective", "Moderately effective", "Minimally effective", "Not effective"])
+    
+    st.subheader("F2. Suggested Interventions")
     rank1 = st.text_input("Priority Intervention 1")
     rank2 = st.text_input("Priority Intervention 2")
+    
+    # RESTORED SECTION F QUESTIONS
+    st.subheader("F3. Strategic Planning")
+    buffer_feasibility = st.radio("Feasibility of implementing buffer zones:", 
+                                  ["Highly feasible", "Moderately feasible", "Difficult", "Not feasible"])
+    program_need = st.radio("Need for collaborative wildlife-livestock health program:", 
+                            ["Urgent", "Important", "Desirable", "Not necessary"])
+
     if st.button("Save Recommendations"):
         save_answer(p_name, p_dept, p_loc_detail, "Section F", "Measures", interv)
-        save_answer(p_name, p_dept, p_loc_detail, "Section F", "Priority 1", rank1)
-        st.success("Recommendations Saved!")
+        save_answer(p_name, p_dept, p_loc_detail, "Section F", "Buffer Feasibility", buffer_feasibility)
+        save_answer(p_name, p_dept, p_loc_detail, "Section F", "Program Urgency", program_need)
+        st.success("Recommendations and Strategic Planning Saved!")
 
 # --- SECTION G: SURVEILLANCE ---
 elif current_session == "Section G: Surveillance":
