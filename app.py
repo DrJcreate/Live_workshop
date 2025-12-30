@@ -18,13 +18,9 @@ def init_db():
                   email TEXT, phone TEXT, experience TEXT)''')
     conn.commit()
     conn.close()
-
 init_db()
-
-# --- SIDEBAR ADMIN CONTROLS ---
 st.sidebar.title("🛠️ Admin Control")
 admin_pwd = st.sidebar.text_input("Enter Admin Password", type="password")
-
 if admin_pwd == ADMIN_PASSWORD:
     st.sidebar.success("Logged In")
     st.sidebar.subheader("Data Management")
