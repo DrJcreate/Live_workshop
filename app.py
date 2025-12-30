@@ -42,7 +42,7 @@ admin_pwd = st.sidebar.text_input("Admin Password", type="password")
 current_session = "Registration"
 if admin_pwd == ADMIN_PASSWORD:
     st.sidebar.success("Logged In")
-    current_session = st.sidebar.radio("Active Session", ["Registration", "Session 2: Section B", "Session 3: Section C"])
+    current_session = st.sidebar.radio("Active Session", ["Registration", "Section B: Spatial", "Section C: Disease", "Section D: Contact", "Section E: Risk", "Section F: Mitigation", "Section G: Surveillance"])
     if st.sidebar.button("Download CSV"):
         conn = psycopg2.connect(DATABASE_URL)
         df = pd.read_sql_query("SELECT * FROM workshop_data", conn)
