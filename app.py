@@ -2,12 +2,14 @@ import streamlit as st
 import pandas as pd
 import psycopg2 
 import os
-import plotly.express as px # Added for visuals
+import plotly.express as px
+import plotly.graph_objects as go
 
 # --- CONFIGURATION ---
 ADMIN_PASSWORD = "workshop_2025" 
 DATABASE_URL = os.environ.get('Database_URL')
 
+# --- DATABASE FETCHING ---
 def get_data():
     try:
         conn = psycopg2.connect(DATABASE_URL)
@@ -17,78 +19,149 @@ def get_data():
     except:
         return pd.DataFrame()
 
-# ... (init_db and save_answer functions remain the same) ...
+def delete_row(row_id):
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("DELETE FROM workshop_data WHERE id = %s", (row_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except:
+        return False
+
+# --- UI HEADER WITH LIVE COUNTER ---
+df_count = get_data()
+total_responses = df_count['name'].nunique() if not df_count.empty else 0
+
+col_title, col_counter = st.columns([4, 1])
+with col_title:
+    st.title("🌲 Wildlife-Livestock Workshop")
+with col_counter:
+    st.metric("Live Responses", total_responses)
 
 # --- ADMIN SIDEBAR ---
-st.sidebar.title("🛠️ Workshop Controller")
+st.sidebar.title("🛠️ Admin Control")
 admin_pwd = st.sidebar.text_input("Admin Password", type="password")
 
 view_mode = "Participant Form"
-current_session = "Registration"
+active_section = "Registration"
 
 if admin_pwd == ADMIN_PASSWORD:
     st.sidebar.success("Logged In")
-    view_mode = st.sidebar.radio("View Mode", ["Participant Form", "📊 LIVE DASHBOARD"])
-    current_session = st.sidebar.radio("Active Session", 
+    view_mode = st.sidebar.selectbox("Window", ["📝 Participant Form", "📊 Visualisations", "⚙️ Data Management"])
+    active_section = st.sidebar.radio("Active Workshop Section", 
         ["Registration", "Section B: Spatial", "Section C: Disease", "Section D: Contact", "Section E: Risk", "Section F: Mitigation", "Section G: Surveillance"])
+    
+    if st.sidebar.button("Download CSV"):
+        df = get_data()
+        st.sidebar.download_button("Export Data", df.to_csv(index=False), "workshop_export.csv")
 
-# --- 📊 VIEW 1: LIVE DASHBOARD ---
-if view_mode == "📊 LIVE DASHBOARD" and admin_pwd == ADMIN_PASSWORD:
-    st.title("📈 Workshop Real-Time Analytics")
+# --- WINDOW 1: VISUALISATIONS ---
+if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
+    st.header(f"Results: {active_section}")
     df = get_data()
     
-    if not df.empty:
-        # 1. PARTICIPANT METRICS
-        total_p = df['name'].nunique()
-        st.metric("Total Participants Registered", total_p)
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Dept Breakdown
-            dept_counts = df.drop_duplicates('name')['dept'].value_counts().reset_index()
-            fig_dept = px.pie(dept_counts, values='count', names='dept', title="Participant Affiliation", hole=0.4)
-            st.plotly_chart(fig_dept, use_container_width=True)
-            
-        with col2:
-            # Disease Mentions (Section C)
-            disease_df = df[(df['session_name'] == 'Section C') & (df['answer'].str.contains('Yes'))]
-            if not disease_df.empty:
-                dis_counts = disease_df['question'].value_counts().reset_index()
-                fig_dis = px.bar(dis_counts, x='count', y='question', orientation='h', title="Top Reported Diseases", color='count', color_continuous_scale='Reds')
-                st.plotly_chart(fig_dis, use_container_width=True)
-
-        # 2. RISK ANALYSIS (Section D)
-        st.subheader("⚠️ Average Risk Perception (1-5 Scale)")
-        risk_df = df[df['session_name'] == 'Section D']
-        if not risk_df.empty:
-            # Filter for the slider questions
-            risk_questions = ["Phys Contact: Water", "Phys Contact: Grazing", "Env: Shared Water", "Tick Density", "Herder Fodder Risk"]
-            risk_data = risk_df[risk_df['question'].isin(risk_questions)].copy()
-            risk_data['answer'] = pd.to_numeric(risk_data['answer'], errors='coerce')
-            risk_avg = risk_data.groupby('question')['answer'].mean().reset_index()
-            
-            fig_risk = px.bar(risk_avg, x='question', y='answer', range_y=[0,5], title="Mean Risk Scores by Category", color='answer', color_continuous_scale='Viridis')
-            st.plotly_chart(fig_risk, use_container_width=True)
-
-        if st.button("🔄 Refresh Data"):
-            st.rerun()
+    if df.empty:
+        st.warning("No data submitted yet.")
     else:
-        st.info("Waiting for participants to submit data...")
+        # --- B1 VISUALS (PERCENTAGE BARS) ---
+        if active_section == "Section B: Spatial":
+            b_df = df[df['session_name'] == 'Section B']
+            for q in ["Grazing Freq", "Water Share"]:
+                q_df = b_df[b_df['question'] == q]['answer'].value_counts(normalize=True).reset_index()
+                q_df.columns = ['Response', 'Percentage']
+                q_df['Percentage'] *= 100
+                fig = px.bar(q_df, x='Response', y='Percentage', title=f"{q} (%)", text_auto='.1f')
+                st.plotly_chart(fig)
 
-# --- 📝 VIEW 2: PARTICIPANT FORM ---
+        # --- SECTION C VISUALS (INDIVIDUAL BARS) ---
+        elif active_section == "Section C: Disease":
+            c_df = df[df['session_name'] == 'Section C']
+            diseases = ["FMD", "Anthrax", "Rabies", "HS", "PPR", "Brucellosis"]
+            for d in diseases:
+                d_counts = c_df[c_df['question'] == d]['answer'].value_counts().reset_index()
+                fig = px.bar(d_counts, x='answer', y='count', title=f"Reports: {d}", color='answer', color_discrete_map={'Yes':'red', 'No':'green'})
+                st.plotly_chart(fig)
+
+        # --- SECTION D VISUALS (RADAR) ---
+        elif active_section == "Section D: Contact":
+            d_df = df[df['session_name'] == 'Section D']
+            d_df['answer'] = pd.to_numeric(d_df['answer'], errors='coerce')
+            avg_risk = d_df.groupby('question')['answer'].mean().reset_index()
+            fig = px.line_polar(avg_risk, r='answer', theta='question', line_close=True, title="Average Risk Profile")
+            fig.update_traces(fill='toself')
+            st.plotly_chart(fig)
+
+        # --- SECTION E VISUALS (GROUPED VACCINATION) ---
+        elif active_section == "Section E: Risk":
+            e_df = df[df['session_name'] == 'Section E']
+            # Vaccination Coverage Grouped Bar
+            vac_df = e_df[e_df['question'].str.contains('Vac')].copy()
+            fig = px.histogram(vac_df, x="question", color="answer", barmode="group", title="Vaccination Coverage Across Diseases")
+            st.plotly_chart(fig)
+        # --- SECTION F VISUALS (MITIGATION) ---
+        elif active_section == "Section F: Mitigation":
+            f_df = df[df['session_name'] == 'Section F']
+            
+            # 1. Feasibility Donut
+            feas_df = f_df[f_df['question'] == 'Buffer Feasibility']['answer'].value_counts().reset_index()
+            fig_feas = px.pie(feas_df, values='count', names='answer', hole=0.5, title="Feasibility of Buffer Zones")
+            st.plotly_chart(fig_feas)
+            
+            # 2. Urgency Donut
+            urg_df = f_df[f_df['question'] == 'Program Urgency']['answer'].value_counts().reset_index()
+            fig_urg = px.pie(urg_df, values='count', names='answer', hole=0.5, title="Urgency of Collaborative Program")
+            st.plotly_chart(fig_urg)
+
+        # --- SECTION G VISUALS (SURVEILLANCE) ---
+        elif active_section == "Section G: Surveillance":
+            g_df = df[df['session_name'] == 'Section G']
+            
+            # 1. Reporting Mechanisms
+            mech_df = g_df[g_df['question'] == 'Mechanism']['answer'].value_counts(normalize=True).reset_index()
+            mech_df.columns = ['Mechanism', 'Percentage']
+            mech_df['Percentage'] *= 100
+            fig_mech = px.bar(mech_df, x='Mechanism', y='Percentage', title="Reporting Mechanisms (%)", color='Mechanism')
+            st.plotly_chart(fig_mech)
+            
+            # 2. Facilities
+            fac_df = g_df[g_df['question'] == 'Diagnostics']['answer'].value_counts().reset_index()
+            fig_fac = px.pie(fac_df, values='count', names='answer', title="Availability of Diagnostic Facilities")
+            st.plotly_chart(fig_fac)
+# --- WINDOW 2: DATA MANAGEMENT ---
+elif view_mode == "⚙️ Data Management" and admin_pwd == ADMIN_PASSWORD:
+    st.header("⚙️ Data Review & Deletion")
+    df = get_data()
+    st.dataframe(df, use_container_width=True)
+    
+    st.divider()
+    del_id = st.number_input("Enter Row ID to Delete", min_value=1, step=1)
+    if st.button("Confirm Deletion"):
+        if delete_row(del_id):
+            st.success(f"Row {del_id} deleted.")
+            st.rerun()
+        else:
+            st.error("Failed to delete.")
+
+# --- WINDOW 3: PARTICIPANT FORM ---
 else:
-    st.write("Participant form is active.")
-# --- REGISTRATION ---
-if current_session == "Registration":
-    st.header("Step 1: Registration")
-    p_desig = st.text_input("Designation")
-    p_email = st.text_input("Email")
-    p_phone = st.text_input("Phone")
-    p_exp = st.text_input("Years of Experience")
-    if st.button("Save Registration"):
-        save_answer(p_name, p_dept, p_loc_detail, "Registration", "Profile", f"{p_desig}, {p_email}, {p_phone}, {p_exp}")
-        st.success("Registration Saved!")
+    # Everything inside here is what the participants see on their phones
+    st.write(f"The room is currently working on: **{current_session}**")
+    
+    # --- REGISTRATION ---
+    if current_session == "Registration":
+        st.header("Step 1: Registration")
+        p_desig = st.text_input("Designation")
+        p_email = st.text_input("Email")
+        p_phone = st.text_input("Phone")
+        p_exp = st.text_input("Years of Experience")
+        
+        if st.button("Save Registration"):
+            # Ensure p_name and p_dept are captured from the top of your app
+            save_answer(p_name, p_dept, p_loc_detail, "Registration", "Profile", f"{p_desig}, {p_email}, {p_phone}, {p_exp}")
+            st.success("Registration Saved!")
 
 # --- SECTION B: SPATIAL INTERFACE ---
 elif current_session == "Section B: Spatial":
