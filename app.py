@@ -76,9 +76,11 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
     df = get_data()
     
     if df.empty:
-        st.info("Waiting for data...")
+        st.info("Waiting for participant data...")
     else:
+        # --- SECTION B: SPATIAL (%) ---
         if current_session == "Section B: Spatial":
+            # Bar charts for each frequency/distance question
             b_qs = ["Grazing Freq", "Grazing Distance", "Water Sharing", "Sighting Freq"]
             for q in b_qs:
                 q_df = df[(df['session_name'] == 'Section B') & (df['question'] == q)]
@@ -88,35 +90,66 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     counts['Percentage'] *= 100
                     st.plotly_chart(px.bar(counts, x='Option', y='Percentage', title=f"{q} (%)", text_auto='.1f'))
 
+        # --- SECTION C: DISEASE (SINGLE LEADERBOARD) ---
         elif current_session == "Section C: Disease":
             c_df = df[df['session_name'] == 'Section C']
             if not c_df.empty:
-                yes_df = c_df[c_df['answer'].str.contains("Yes", na=False)]
+                # Filter only 'Yes' responses
+                yes_df = c_df[c_df['answer'] == "Yes"]
+                # Count occurrences per disease (which is stored in 'question')
                 disease_counts = yes_df['question'].value_counts().reset_index()
-                disease_counts.columns = ['Disease', 'Reports']
-                st.plotly_chart(px.bar(disease_counts, x='Disease', y='Reports', title="Disease Presence (Yes Counts Only)"))
+                disease_counts.columns = ['Disease Name', 'Participants Reporting Outbreak']
+                
+                fig_c = px.bar(disease_counts, 
+                             x='Disease Name', 
+                             y='Participants Reporting Outbreak', 
+                             title="Total Reported Outbreaks (Yes Counts)",
+                             color_discrete_sequence=['#FF4B4B'])
+                st.plotly_chart(fig_c, use_container_width=True)
 
+        # --- SECTION D: CONTACT (AVERAGE SCORES) ---
         elif current_session == "Section D: Contact":
             d_df = df[df['session_name'] == 'Section D'].copy()
             d_df['num_ans'] = pd.to_numeric(d_df['answer'], errors='coerce')
             d_avg = d_df.groupby('question')['num_ans'].mean().reset_index().dropna()
             st.plotly_chart(px.bar(d_avg, x='question', y='num_ans', title="Mean Risk Scores (1-5 Scale)"))
 
+        # --- SECTION E: RISK (VACCINATION BY DISEASE) ---
         elif current_session == "Section E: Risk":
             e_df = df[df['session_name'] == 'Section E']
+            # Filter for vaccination questions specifically
             vac_df = e_df[e_df['question'].str.contains("Vac")].copy()
             if not vac_df.empty:
-                fig = px.histogram(vac_df, x="question", color="answer", barmode="relative", barnorm='percent', 
-                                   title="Vaccination Profile (%)", category_orders={"answer": ["<20%", "20-40%", "40-60%", "60-80%", ">80%"]})
-                st.plotly_chart(fig)
+                # This grouped bar chart shows Disease on X and Coverage levels in the legend
+                fig_e = px.histogram(vac_df, 
+                                   x="question", 
+                                   color="answer", 
+                                   barmode="group",
+                                   title="Vaccination Coverage by Disease Type",
+                                   category_orders={"answer": ["<20%", "20-40%", "40-60%", "60-80%", ">80%"]})
+                st.plotly_chart(fig_e, use_container_width=True)
 
-        elif current_session in ["Section F: Mitigation", "Section G: Surveillance"]:
-            curr_df = df[df['session_name'] == current_session]
-            for q in curr_df['question'].unique():
-                q_counts = curr_df[curr_df['question'] == q]['answer'].value_counts(normalize=True).reset_index()
-                q_counts.columns = ['Option', 'Percentage']
+        # --- SECTION F: MITIGATION ---
+        elif current_session == "Section F: Mitigation":
+            f_df = df[df['session_name'] == 'Section F']
+            # Loop through all questions in Section F (Feasibility, Urgency, etc.)
+            f_qs = f_df['question'].unique()
+            for q in f_qs:
+                q_counts = f_df[f_df['question'] == q]['answer'].value_counts(normalize=True).reset_index()
+                q_counts.columns = ['Response', 'Percentage']
                 q_counts['Percentage'] *= 100
-                st.plotly_chart(px.bar(q_counts, x='Option', y='Percentage', title=f"{q} (%)", text_auto='.1f'))
+                st.plotly_chart(px.bar(q_counts, x='Response', y='Percentage', title=f"{q} (%)", text_auto='.1f'))
+
+        # --- SECTION G: SURVEILLANCE ---
+        elif current_session == "Section G: Surveillance":
+            g_df = df[df['session_name'] == 'Section G']
+            # Loop through all questions (Facility, Mechanism, Frequency, etc.)
+            g_qs = g_df['question'].unique()
+            for q in g_qs:
+                q_counts = g_df[g_df['question'] == q]['answer'].value_counts(normalize=True).reset_index()
+                q_counts.columns = ['Response', 'Percentage']
+                q_counts['Percentage'] *= 100
+                st.plotly_chart(px.bar(q_counts, x='Response', y='Percentage', title=f"{q} (%)", text_auto='.1f'))
 
 # --- WINDOW 2: DATA MANAGEMENT ---
 elif view_mode == "⚙️ Data Management" and admin_pwd == ADMIN_PASSWORD:
