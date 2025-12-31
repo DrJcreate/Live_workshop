@@ -30,6 +30,53 @@ def save_answer(name, dept, loc, session, q, ans):
     except:
         st.error("Error saving to database.")
 
+import random
+
+# --- TEST DATA GENERATOR ---
+def run_test_simulation():
+    # Define 5 fake participants
+    test_participants = ["Test_Dr_Amit", "Test_Officer_Priya", "Test_Field_Staff_1", "Test_Vet_Karan", "Test_Forest_Guard"]
+    
+    for p_name in test_participants:
+        p_dept = random.choice(["Forest Department", "Animal Husbandry Department"])
+        p_loc = "Test Sanctuary" if p_dept == "Forest Department" else "Test District"
+        
+        # Section B: Spatial (Percentage Check)
+        save_answer(p_name, p_dept, p_loc, "Section B", "Grazing Freq", random.choice(["Daily", "Occasionally", "Rarely"]))
+        save_answer(p_name, p_dept, p_loc, "Section B", "Grazing Distance", random.choice(["Inside forest", "0-500m", "1-2km"]))
+        save_answer(p_name, p_dept, p_loc, "Section B", "Water Sharing", random.choice(["Regularly", "Seasonally", "No"]))
+        save_answer(p_name, p_dept, p_loc, "Section B", "Sighting Freq", random.choice(["Daily", "Weekly", "Rarely"]))
+
+        # Section C: Disease (The "Yes" Leaderboard Check)
+        # Randomly assigns Yes or No to each disease to populate the X-axis
+        for d in ["FMD", "Anthrax", "Rabies", "HS", "PPR", "Brucellosis"]:
+            save_answer(p_name, p_dept, p_loc, "Section C", d, random.choice(["Yes", "No"]))
+
+        # Section D: Contact (Average Score 1-5 Check)
+        for r in ["Phys: Water", "Phys: Grazing", "Tick Density", "Fodder Risk", "Product Risk"]:
+            save_answer(p_name, p_dept, p_loc, "Section D", r, random.randint(1, 5))
+
+        # Section E: Risk (Stacked Vaccination Check)
+        for v in ["FMD Vac", "Brucella Vac", "HS Vac", "BQ Vac", "LSD Vac"]:
+            save_answer(p_name, p_dept, p_loc, "Section E", v, random.choice(["<20%", "40-60%", ">80%"]))
+
+        # Section F & G: Mitigation/Surveillance (Percentage Check)
+        save_answer(p_name, p_dept, p_loc, "Section F", "Buffer Feasibility", random.choice(["Highly feasible", "Difficult"]))
+        save_answer(p_name, p_dept, p_loc, "Section G", "Mechanism", random.choice(["Active surveillance", "Passive surveillance"]))
+
+# --- RESET DATABASE FUNCTION ---
+def clear_all_data():
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        # This deletes everything and resets the ID counter to 1
+        cur.execute("TRUNCATE TABLE workshop_data RESTART IDENTITY")
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except:
+        return False
 def delete_row(row_id):
     try:
         conn = psycopg2.connect(DATABASE_URL)
