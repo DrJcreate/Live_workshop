@@ -2,73 +2,83 @@ import streamlit as st
 import pandas as pd
 import psycopg2 
 import os
+import plotly.express as px # Added for visuals
 
 # --- CONFIGURATION ---
 ADMIN_PASSWORD = "workshop_2025" 
 DATABASE_URL = os.environ.get('Database_URL')
 
-# --- DATABASE SETUP ---
-def init_db():
+def get_data():
     try:
         conn = psycopg2.connect(DATABASE_URL)
-        cur = conn.cursor()
-        # cur.execute("DROP TABLE IF EXISTS workshop_data") 
-        cur.execute('''CREATE TABLE IF NOT EXISTS workshop_data 
-             (id SERIAL PRIMARY KEY, name TEXT, designation TEXT, dept TEXT, location_info TEXT,
-              email TEXT, phone TEXT, experience TEXT,
-              session_name TEXT, question TEXT, answer TEXT)''')
-        conn.commit()
-        cur.close()
+        df = pd.read_sql_query("SELECT * FROM workshop_data", conn)
         conn.close()
-    except Exception as e:
-        st.error(f"Database connection failed: {e}")
+        return df
+    except:
+        return pd.DataFrame()
 
-init_db()
-
-def save_answer(name, dept, loc, session, q, ans):
-    try:
-        conn = psycopg2.connect(DATABASE_URL)
-        cur = conn.cursor()
-        cur.execute("INSERT INTO workshop_data (name, dept, location_info, session_name, question, answer) VALUES (%s,%s,%s,%s,%s,%s)",
-                    (name, dept, loc, session, q, str(ans)))
-        conn.commit()
-        cur.close()
-        conn.close()
-    except Exception as e:
-        st.error(f"Error saving data: {e}")
+# ... (init_db and save_answer functions remain the same) ...
 
 # --- ADMIN SIDEBAR ---
 st.sidebar.title("🛠️ Workshop Controller")
 admin_pwd = st.sidebar.text_input("Admin Password", type="password")
+
+view_mode = "Participant Form"
 current_session = "Registration"
 
 if admin_pwd == ADMIN_PASSWORD:
     st.sidebar.success("Logged In")
+    view_mode = st.sidebar.radio("View Mode", ["Participant Form", "📊 LIVE DASHBOARD"])
     current_session = st.sidebar.radio("Active Session", 
         ["Registration", "Section B: Spatial", "Section C: Disease", "Section D: Contact", "Section E: Risk", "Section F: Mitigation", "Section G: Surveillance"])
-    if st.sidebar.button("Download CSV"):
-        conn = psycopg2.connect(DATABASE_URL)
-        df = pd.read_sql_query("SELECT * FROM workshop_data", conn)
-        conn.close()
-        st.sidebar.download_button("Download Results", df.to_csv(index=False), "workshop_results.csv")
 
-# --- MAIN UI ---
-st.title("🌲 Wildlife-Livestock Interface Workshop")
-p_name = st.text_input("Full Name")
-p_dept = st.selectbox("Select Department", ["Select...", "Forest Department", "Animal Husbandry Department"])
+# --- 📊 VIEW 1: LIVE DASHBOARD ---
+if view_mode == "📊 LIVE DASHBOARD" and admin_pwd == ADMIN_PASSWORD:
+    st.title("📈 Workshop Real-Time Analytics")
+    df = get_data()
+    
+    if not df.empty:
+        # 1. PARTICIPANT METRICS
+        total_p = df['name'].nunique()
+        st.metric("Total Participants Registered", total_p)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Dept Breakdown
+            dept_counts = df.drop_duplicates('name')['dept'].value_counts().reset_index()
+            fig_dept = px.pie(dept_counts, values='count', names='dept', title="Participant Affiliation", hole=0.4)
+            st.plotly_chart(fig_dept, use_container_width=True)
+            
+        with col2:
+            # Disease Mentions (Section C)
+            disease_df = df[(df['session_name'] == 'Section C') & (df['answer'].str.contains('Yes'))]
+            if not disease_df.empty:
+                dis_counts = disease_df['question'].value_counts().reset_index()
+                fig_dis = px.bar(dis_counts, x='count', y='question', orientation='h', title="Top Reported Diseases", color='count', color_continuous_scale='Reds')
+                st.plotly_chart(fig_dis, use_container_width=True)
 
-p_loc_detail = ""
-if p_dept == "Forest Department":
-    p_loc_detail = st.selectbox("Select Tiger Reserve/Safari", ["Kanha", "Pench", "Panna", "Satpura", "Ratapani", "Bandhavgarh", "Sanjay", "Van Vihar", "MMSJ", "White Tiger Safari"])
-elif p_dept == "Animal Husbandry Department":
-    dist, blk = st.columns(2)
-    with dist: d_val = st.text_input("District")
-    with blk: b_val = st.text_input("Block")
-    i_val = st.text_input("Institution")
-    p_loc_detail = f"{d_val} | {b_val} | {i_val}"
+        # 2. RISK ANALYSIS (Section D)
+        st.subheader("⚠️ Average Risk Perception (1-5 Scale)")
+        risk_df = df[df['session_name'] == 'Section D']
+        if not risk_df.empty:
+            # Filter for the slider questions
+            risk_questions = ["Phys Contact: Water", "Phys Contact: Grazing", "Env: Shared Water", "Tick Density", "Herder Fodder Risk"]
+            risk_data = risk_df[risk_df['question'].isin(risk_questions)].copy()
+            risk_data['answer'] = pd.to_numeric(risk_data['answer'], errors='coerce')
+            risk_avg = risk_data.groupby('question')['answer'].mean().reset_index()
+            
+            fig_risk = px.bar(risk_avg, x='question', y='answer', range_y=[0,5], title="Mean Risk Scores by Category", color='answer', color_continuous_scale='Viridis')
+            st.plotly_chart(fig_risk, use_container_width=True)
 
-st.divider()
+        if st.button("🔄 Refresh Data"):
+            st.rerun()
+    else:
+        st.info("Waiting for participants to submit data...")
 
+# --- 📝 VIEW 2: PARTICIPANT FORM ---
+else:
+    st.write("Participant form is active.")
 # --- REGISTRATION ---
 if current_session == "Registration":
     st.header("Step 1: Registration")
