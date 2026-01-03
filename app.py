@@ -34,18 +34,16 @@ def save_answer(name, dept, loc, session, q, ans):
         st.error("Error saving to database.")
 
 # --- DUMMY DATA GENERATOR FOR TESTING VISUALS ---
-def run_test_simulation():
+def run_test_simulation(n_participants: int = 40):
     """
     Populate the database with dummy data for visual testing.
+    Generates at least `n_participants` test participants.
     Uses the same question labels and categories as the current form.
     """
 
+    # Create a list of synthetic participant names
     test_participants = [
-        "Test_Dr_Amit",
-        "Test_Officer_Priya",
-        "Test_Field_Staff_1",
-        "Test_Vet_Karan",
-        "Test_Forest_Guard"
+        f"Test_Participant_{i+1:02d}" for i in range(n_participants)
     ]
 
     for p_name in test_participants:
@@ -151,6 +149,7 @@ def run_test_simulation():
             p_name, p_dept, p_loc, "Section G", "Frequency",
             random.choice(["Weekly", "Monthly", "Quarterly", "Outbreaks only", "None"])
         )
+
 
 # --- RESET DATABASE FUNCTION ---
 def clear_all_data():
