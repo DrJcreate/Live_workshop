@@ -3,6 +3,7 @@ import pandas as pd
 import psycopg2 
 import os
 import plotly.express as px
+import random  # for dummy data generation
 
 # --- CONFIGURATION ---
 ADMIN_PASSWORD = "workshop_2025" 
@@ -32,12 +33,130 @@ def save_answer(name, dept, loc, session, q, ans):
     except:
         st.error("Error saving to database.")
 
+# --- DUMMY DATA GENERATOR FOR TESTING VISUALS ---
+def run_test_simulation():
+    """
+    Populate the database with dummy data for visual testing.
+    Uses the same question labels and categories as the current form.
+    """
+
+    test_participants = [
+        "Test_Dr_Amit",
+        "Test_Officer_Priya",
+        "Test_Field_Staff_1",
+        "Test_Vet_Karan",
+        "Test_Forest_Guard"
+    ]
+
+    for p_name in test_participants:
+        p_dept = random.choice(["Forest Department", "Animal Husbandry Department"])
+        p_loc = "Test Sanctuary" if p_dept == "Forest Department" else "Test District"
+
+        # ---------- Section B: Spatial ----------
+        save_answer(
+            p_name, p_dept, p_loc, "Section B", "Grazing Freq",
+            random.choice(["Daily", "4-6 times/week", "2-3 times/week", "Occasionally", "Rarely/Never"])
+        )
+        save_answer(
+            p_name, p_dept, p_loc, "Section B", "Grazing Distance",
+            random.choice(["Inside forest", "0-500m", "500m-1km", "1-2km", ">2km"])
+        )
+        save_answer(
+            p_name, p_dept, p_loc, "Section B", "Water Sharing",
+            random.choice(["Regularly", "Seasonally", "Occasionally", "Rarely", "No"])
+        )
+        save_answer(
+            p_name, p_dept, p_loc, "Section B", "Sighting Freq",
+            random.choice(["Daily", "Weekly", "Monthly", "Occasionally", "Rarely"])
+        )
+
+        # ---------- Section C: Disease ----------
+        diseases = ["FMD", "Anthrax", "Rabies", "HS", "PPR", "Brucellosis", "Bovine TB", "Parasitic"]
+        for d in diseases:
+            save_answer(
+                p_name, p_dept, p_loc, "Section C", d,
+                random.choice(["Yes", "No"])
+            )
+
+        # ---------- Section D: Contact ----------
+        for q in [
+            "Phys: Water",
+            "Phys: Grazing",
+            "Phys: Attack",
+            "Env: Shared Water",
+            "Env: Pasture",
+            "Tick Density",
+            "Herders in Forest",
+            "Forest Product Collection",
+        ]:
+            save_answer(
+                p_name, p_dept, p_loc, "Section D", q,
+                random.randint(1, 5)
+            )
+
+        save_answer(
+            p_name, p_dept, p_loc, "Section D", "Predation Count",
+            random.choice(["1-2", "3-5", "More than 10"])
+        )
+
+        # ---------- Section E: Vaccination + biosecurity ----------
+        for v in ["FMD Vac", "Brucella Vac", "HS Vac", "BQ Vac", "LSD Vac"]:
+            save_answer(
+                p_name, p_dept, p_loc, "Section E", v,
+                random.choice(["<20%", "20-40%", "40-60%", "60-80%", ">80%"])
+            )
+
+        save_answer(
+            p_name, p_dept, p_loc, "Section E", "Quarantine",
+            random.choice(["Always", "Usually", "Sometimes", "Rarely", "Never"])
+        )
+        save_answer(
+            p_name, p_dept, p_loc, "Section E", "Carcass Disposal",
+            random.choice([
+                "Proper burial/burning",
+                "Burial without lime",
+                "Left in fields",
+                "Dumped near forest"
+            ])
+        )
+
+        # ---------- Section F: Mitigation ----------
+        save_answer(
+            p_name, p_dept, p_loc, "Section F", "Buffer Feasibility",
+            random.choice(["Highly feasible", "Moderately feasible", "Difficult", "Not feasible"])
+        )
+        save_answer(
+            p_name, p_dept, p_loc, "Section F", "Program Urgency",
+            random.choice(["Urgent", "Important", "Desirable", "Not necessary"])
+        )
+
+        # ---------- Section G: Surveillance & diagnostics ----------
+        save_answer(
+            p_name, p_dept, p_loc, "Section G", "Facility",
+            random.choice(["Within district", "Neighboring district", "Regional lab", "None"])
+        )
+
+        all_tests = ["ELISA", "PCR", "Culture & Sensitivity", "Rapid Tests/Kits", "Microscopy"]
+        tests_subset = random.sample(all_tests, k=random.randint(1, len(all_tests)))
+        save_answer(
+            p_name, p_dept, p_loc, "Section G", "Tests",
+            tests_subset
+        )
+
+        save_answer(
+            p_name, p_dept, p_loc, "Section G", "Mechanism",
+            random.choice(["Active surveillance", "Passive surveillance", "No formal system"])
+        )
+        save_answer(
+            p_name, p_dept, p_loc, "Section G", "Frequency",
+            random.choice(["Weekly", "Monthly", "Quarterly", "Outbreaks only", "None"])
+        )
+
 # --- RESET DATABASE FUNCTION ---
 def clear_all_data():
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
-        # This deletes everything and resets the ID counter to 1
         cur.execute("TRUNCATE TABLE workshop_data RESTART IDENTITY")
         conn.commit()
         cur.close()
@@ -84,20 +203,21 @@ if admin_pwd == ADMIN_PASSWORD:
     )
     current_session = st.sidebar.radio(
         "Active Session", 
-        [
-            "Registration",
-            "Section B: Spatial",
-            "Section C: Disease",
-            "Section D: Contact",
-            "Section E: Risk",
-            "Section F: Mitigation",
-            "Section G: Surveillance"
-        ]
+        ["Registration", "Section B: Spatial", "Section C: Disease", "Section D: Contact", "Section E: Risk", "Section F: Mitigation", "Section G: Surveillance"]
     )
     
     if st.sidebar.button("Download Data"):
         df = get_data()
         st.sidebar.download_button("CSV Export", df.to_csv(index=False), "workshop_data.csv")
+
+    # NEW: reset and load dummy data
+    if st.sidebar.button("Reset DB with dummy test data"):
+        if clear_all_data():
+            run_test_simulation()
+            st.sidebar.success("Database cleared and dummy data loaded.")
+            st.rerun()
+        else:
+            st.sidebar.error("Failed to clear database. Check DB connection.")
 
 # --- WINDOW 1: VISUALISATIONS ---
 if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
@@ -116,7 +236,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
             else:
                 st.subheader("Section B: Spatial – Group Results")
 
-                # 1. SNAPSHOT PERCENTAGE BARS FOR EACH QUESTION
                 st.markdown("### Snapshot: What are people reporting?")
 
                 question_order = {
@@ -162,7 +281,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
 
                         st.plotly_chart(fig, use_container_width=True)
 
-                # 2. HEATMAP: GRAZING DISTANCE x GRAZING FREQUENCY
                 st.markdown("### Grazing Distance × Grazing Frequency")
 
                 gf = b_df[b_df["question"] == "Grazing Freq"].copy()
@@ -209,7 +327,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
 
                     st.plotly_chart(fig, use_container_width=True)
 
-                # 3. HEATMAP: SIGHTING FREQUENCY x GRAZING FREQUENCY
                 st.markdown("### Wildlife Sighting × Grazing Frequency")
 
                 sf = b_df[b_df["question"] == "Sighting Freq"].copy()
@@ -263,7 +380,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
             else:
                 st.header("Section C: Disease (Last 3 Years)")
 
-                # 0. CLEANING STEP: ONE ROW PER PERSON PER DISEASE
                 if "id" in c_df.columns:
                     c_df = (
                         c_df.sort_values("id")
@@ -272,7 +388,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
 
                 c_df = c_df[c_df["answer"].notna()]
 
-                # 1. PERCENTAGE OF "YES" OUTBREAKS PER DISEASE
                 st.subheader("Outbreak reporting by disease")
 
                 counts = (
@@ -314,7 +429,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     with st.expander("Show counts for Yes and No by disease"):
                         st.dataframe(counts.sort_values(["question", "answer"]), use_container_width=True)
 
-                # 2. HEATMAP: OUTBREAKS BY LOCATION AND DISEASE (YES ONLY)
                 st.subheader("Where are outbreaks reported?")
 
                 yes_df = c_df[c_df["answer"] == "Yes"].copy()
@@ -358,7 +472,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     )
                     st.plotly_chart(fig_heat, use_container_width=True)
 
-                # 3. LOCATION-LEVEL DISEASE BREADTH
                 st.subheader("How many different diseases are reported per location?")
 
                 if yes_df.empty:
@@ -421,7 +534,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     question_cat = pd.CategoricalDtype(categories=risk_questions, ordered=True)
                     numeric_df["question"] = numeric_df["question"].astype(question_cat)
 
-                    # 1. MEAN SCORE PER CONTACT PATHWAY
                     st.subheader("Average risk scores by contact pathway")
 
                     d_avg = (
@@ -448,7 +560,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     )
                     st.plotly_chart(fig_bar, use_container_width=True)
 
-                    # 2. RADAR PLOT OF MEAN SCORES
                     st.subheader("Overall contact profile (radar plot)")
 
                     fig_radar = px.line_polar(
@@ -462,7 +573,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     fig_radar.update_traces(fill="toself")
                     st.plotly_chart(fig_radar, use_container_width=True)
 
-                    # 3. MEAN CONTACT SCORE BY LOCATION
                     st.subheader("Average contact score by location")
 
                     per_person = (
@@ -497,7 +607,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     else:
                         st.info("No location information available for contact scores.")
 
-                # 4. PREDATION INCIDENTS DISTRIBUTION
                 st.subheader("Wildlife predation incidents per month")
 
                 pred_df = d_df[d_df["question"] == "Predation Count"].copy()
@@ -567,7 +676,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     ">80%": 5
                 }
 
-                # 1. VACCINATION COVERAGE DISTRIBUTION
                 st.subheader("Vaccination coverage by disease")
 
                 if vac_df.empty:
@@ -615,7 +723,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                             use_container_width=True
                         )
 
-                    # 2. AVERAGE COVERAGE SCORE PER VACCINE
                     st.subheader("Average coverage score (1 low, 5 high)")
 
                     vac_df["CoverageScore"] = vac_df["answer"].map(coverage_score_map)
@@ -650,7 +757,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     )
                     st.plotly_chart(fig_avg, use_container_width=True)
 
-                # 3. QUARANTINE PRACTICES
                 st.subheader("Quarantine practices for new livestock")
 
                 q_df = e_df[e_df["question"] == "Quarantine"].copy()
@@ -689,7 +795,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     )
                     st.plotly_chart(fig_q, use_container_width=True)
 
-                # 4. CARCASS DISPOSAL PRACTICES
                 st.subheader("Carcass disposal practices")
 
                 c_df = e_df[e_df["question"] == "Carcass Disposal"].copy()
@@ -764,7 +869,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     "Not necessary"
                 ]
 
-                # 1. BUFFER ZONE FEASIBILITY
                 st.subheader("Feasibility of buffer zones")
 
                 feas_df = f_df[f_df["question"] == "Buffer Feasibility"].copy()
@@ -802,7 +906,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     )
                     st.plotly_chart(fig_feas, use_container_width=True)
 
-                # 2. PROGRAM URGENCY
                 st.subheader("Urgency of collaborative programme")
 
                 urg_df = f_df[f_df["question"] == "Program Urgency"].copy()
@@ -840,7 +943,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     )
                     st.plotly_chart(fig_urg, use_container_width=True)
 
-                # 3. LIKERT STYLE HORIZONTAL SUMMARY
                 st.subheader("Summary view (Likert style)")
 
                 likert_df = f_df[f_df["question"].isin(
@@ -921,7 +1023,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     "None"
                 ]
 
-                # 1. DIAGNOSTIC FACILITY AVAILABILITY
                 st.subheader("Diagnostic facility availability")
 
                 fac_df = g_df[g_df["question"] == "Facility"].copy()
@@ -959,7 +1060,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     )
                     st.plotly_chart(fig_fac, use_container_width=True)
 
-                # 2. SURVEILLANCE MECHANISM
                 st.subheader("Surveillance mechanism")
 
                 mech_df = g_df[g_df["question"] == "Mechanism"].copy()
@@ -997,7 +1097,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     )
                     st.plotly_chart(fig_mech, use_container_width=True)
 
-                # 3. SURVEILLANCE FREQUENCY
                 st.subheader("Surveillance activity frequency")
 
                 freq_df = g_df[g_df["question"] == "Frequency"].copy()
@@ -1035,7 +1134,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     )
                     st.plotly_chart(fig_freq, use_container_width=True)
 
-                # 4. DIAGNOSTIC TEST TYPES AVAILABLE
                 st.subheader("Diagnostic tests reportedly available")
 
                 tests_df = g_df[g_df["question"] == "Tests"].copy()
@@ -1154,7 +1252,6 @@ else:
             save_answer(p_name, p_dept, p_loc, "Section B", "Grazing Distance", b2)
             save_answer(p_name, p_dept, p_loc, "Section B", "Water Sharing", b3)
             save_answer(p_name, p_dept, p_loc, "Section B", "Sighting Freq", b6)
-            # b4 and b5 could be saved later when you decide structure
             st.success("Section B Saved")
 
     elif current_session == "Section C: Disease":
@@ -1239,7 +1336,6 @@ else:
         if st.button("Save Section F"):
             save_answer(p_name, p_dept, p_loc, "Section F", "Buffer Feasibility", f1)
             save_answer(p_name, p_dept, p_loc, "Section F", "Program Urgency", f2)
-            # f3 can be saved later if you define structure
             st.success("Section F Saved")
 
     elif current_session == "Section G: Surveillance":
