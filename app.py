@@ -1,87 +1,37 @@
 import streamlit as st
 import pandas as pd
+import psycopg2 
 import os
 import plotly.express as px
-import random
-from sqlalchemy import text  # Add this for secure, pooled queries
-import logging              # Add this for better error tracking on Render
+import random  # for dummy data generation
 
 # --- CONFIGURATION ---
 ADMIN_PASSWORD = "workshop_2025" 
 DATABASE_URL = os.environ.get('Database_URL')
 
 # --- DATABASE LOGIC ---
-DATABASE_URL = os.environ.get('Database_URL')
-
-# SQLAlchemy requires 'postgresql://' (Render sometimes provides 'postgres://')
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-# Create the connection with explicit pooling for high concurrency
-conn = st.connection(
-    "postgresql", 
-    type="sql", 
-    url=DATABASE_URL,
-    pool_size=10,        # Max permanent connections
-    max_overflow=20,     # Temporary extra connections during peak load
-    pool_timeout=30,     # How long to wait for a connection before failing
-    pool_recycle=1800    # Close connections after 30 mins to avoid stale links
-)
-# Pass the URL directly as a keyword argument (url=...)
-conn = st.connection("postgresql", type="sql", url=DATABASE_URL)
-
 def get_data():
     try:
-        # ttl=0 ensures we always get fresh data for the live counter/visuals
-        query = "SELECT * FROM workshop_data"
-        df = conn.query(query, ttl=0)
+        conn = psycopg2.connect(DATABASE_URL)
+        df = pd.read_sql_query("SELECT * FROM workshop_data", conn)
+        conn.close()
         return df
-    except Exception as e:
-        logging.error(f"Database Error: {e}")
+    except:
         return pd.DataFrame()
 
 def save_answer(name, dept, loc, session, q, ans):
-    if not name:
-        st.error("Please enter your name before saving.")
-        return
     try:
-        with conn.session as s:
-            sql = text("""
-                INSERT INTO workshop_data (name, dept, location_info, session_name, question, answer) 
-                VALUES (:name, :dept, :loc, :session, :q, :ans)
-            """)
-            s.execute(sql, {
-                "name": name, 
-                "dept": dept, 
-                "loc": loc, 
-                "session": session, 
-                "q": q, 
-                "ans": str(ans)
-            })
-            s.commit()
-    except Exception as e:
-        st.error("Connection busy. Please try clicking save again in a moment.")
-        logging.error(f"Save Error: {e}")
-
-def clear_all_data():
-    try:
-        with conn.session as s:
-            s.execute(text("TRUNCATE TABLE workshop_data RESTART IDENTITY"))
-            s.commit()
-        return True
-    except Exception as e:
-        logging.error(f"Clear Error: {e}")
-        return False
-
-def delete_row(row_id):
-    try:
-        with conn.session as s:
-            s.execute(text("DELETE FROM workshop_data WHERE id = :id"), {"id": row_id})
-            s.commit()
-        return True
-    except Exception as e:
-        logging.error(f"Delete Error: {e}")
-        return False
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO workshop_data (name, dept, location_info, session_name, question, answer) VALUES (%s,%s,%s,%s,%s,%s)",
+            (name, dept, loc, session, q, str(ans))
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+    except:
+        st.error("Error saving to database.")
 
 # --- DUMMY DATA GENERATOR FOR TESTING VISUALS ---
 def run_test_simulation(n_participants: int = 40):
@@ -1090,33 +1040,6 @@ elif view_mode == "⚙️ Data Management" and admin_pwd == ADMIN_PASSWORD:
             st.rerun()
 
 # --- WINDOW 3: PARTICIPANT FORM ---
-# --- INITIALIZE SESSION STATE ---
-# This ensures the key exists so the app doesn't crash on the first load
-if "user_name" not in st.session_state:
-    st.session_state.user_name = ""
-
-if "user_dept" not in st.session_state:
-    st.session_state.user_dept = "Select..."
-
-# --- WINDOW 3: PARTICIPANT FORM ---
-# Now you can safely use st.session_state.user_name
-p_name = st.text_input("Full Name", value=st.session_state.user_name)
-
-# This part is crucial: update the state whenever the input changes
-if p_name != st.session_state.user_name:
-    st.session_state.user_name = p_name
-    p_name = st.text_input("Full Name", value=st.session_state.p_name)
-    st.session_state.p_name = p_name # Update state immediately
-    
-    p_dept = st.selectbox("Department", ["Select...", "Forest Department", "Animal Husbandry Department"], 
-                          index=0 if st.session_state.p_dept == "Select..." else 
-                          (1 if st.session_state.p_dept == "Forest Department" else 2))
-    st.session_state.p_dept = p_dept
-
-# Then update the text input to use session state
-p_name = st.text_input("Full Name", value=st.session_state.user_name)
-if p_name != st.session_state.user_name:
-    st.session_state.user_name = p_name
 else:
     p_name = st.text_input("Full Name")
     p_dept = st.selectbox("Department", ["Select...", "Forest Department", "Animal Husbandry Department"])
@@ -1158,22 +1081,11 @@ else:
     elif current_session == "Section C: Disease":
         st.header("Section C: Disease (Last 3 Years)")
         diseases = ["FMD", "Anthrax", "Rabies", "HS", "PPR", "Brucellosis", "Bovine TB", "Parasitic"]
-        
-        # Use a form to batch the results
-        with st.form("disease_form"):
-            responses = {}
-            for d in diseases:
-                responses[d] = st.radio(f"{d} Outbreak?", ["No", "Yes"], key=f"radio_{d}")
-            
-            submit_c = st.form_submit_button("Save All Diseases")
-            
-            if submit_c:
-                if not p_name:
-                    st.error("Please enter your name at the top first!")
-                else:
-                    for d, occ in responses.items():
-                        save_answer(p_name, p_dept, p_loc, "Section C", d, occ)
-                    st.success("All Disease Data Saved!")
+        for d in diseases:
+            occ = st.radio(f"{d} Outbreak?", ["No", "Yes"], key=d)
+            if st.button(f"Save {d}", key=f"btn_{d}"):
+                save_answer(p_name, p_dept, p_loc, "Section C", d, occ)
+                st.toast(f"{d} Saved")
 
     elif current_session == "Section D: Contact":
         st.header("Section D: Contact & Risk (Score 1-5)")
