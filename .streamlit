@@ -1,0 +1,3 @@
+secrets.toml
+ADMIN_PASSWORD = "workshop_2025"                
+DATABASE_URL = "postgresql://workshop_db_bgad_user:zD5HloYoxWmx6SOB2axxlM4LnTQmC9bE@dpg-d59pfk0gjchc73asifj0-a/workshop_db_bgad"
