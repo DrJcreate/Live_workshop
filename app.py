@@ -686,7 +686,7 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                         .groupby(level=0)
                         .apply(lambda x: 100 * x / x.sum())
                     )
-                   shares = shares.to_frame("Percentage").reset_index()
+                    shares = shares.to_frame("Percentage").reset_index()
 
                     shares["answer"] = pd.Categorical(
                         shares["answer"],
