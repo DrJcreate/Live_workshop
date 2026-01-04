@@ -1073,8 +1073,18 @@ elif view_mode == "⚙️ Data Management" and admin_pwd == ADMIN_PASSWORD:
             st.rerun()
 
 # --- WINDOW 3: PARTICIPANT FORM ---
-if 'user_name' not in st.session_state:
-    st.session_state.user_name = ""
+# Initialize session state for user info
+    if 'p_name' not in st.session_state: st.session_state.p_name = ""
+    if 'p_dept' not in st.session_state: st.session_state.p_dept = "Select..."
+    if 'p_loc_idx' not in st.session_state: st.session_state.p_loc_idx = 0
+
+    p_name = st.text_input("Full Name", value=st.session_state.p_name)
+    st.session_state.p_name = p_name # Update state immediately
+    
+    p_dept = st.selectbox("Department", ["Select...", "Forest Department", "Animal Husbandry Department"], 
+                          index=0 if st.session_state.p_dept == "Select..." else 
+                          (1 if st.session_state.p_dept == "Forest Department" else 2))
+    st.session_state.p_dept = p_dept
 
 # Then update the text input to use session state
 p_name = st.text_input("Full Name", value=st.session_state.user_name)
@@ -1121,11 +1131,22 @@ else:
     elif current_session == "Section C: Disease":
         st.header("Section C: Disease (Last 3 Years)")
         diseases = ["FMD", "Anthrax", "Rabies", "HS", "PPR", "Brucellosis", "Bovine TB", "Parasitic"]
-        for d in diseases:
-            occ = st.radio(f"{d} Outbreak?", ["No", "Yes"], key=d)
-            if st.button(f"Save {d}", key=f"btn_{d}"):
-                save_answer(p_name, p_dept, p_loc, "Section C", d, occ)
-                st.toast(f"{d} Saved")
+        
+        # Use a form to batch the results
+        with st.form("disease_form"):
+            responses = {}
+            for d in diseases:
+                responses[d] = st.radio(f"{d} Outbreak?", ["No", "Yes"], key=f"radio_{d}")
+            
+            submit_c = st.form_submit_button("Save All Diseases")
+            
+            if submit_c:
+                if not p_name:
+                    st.error("Please enter your name at the top first!")
+                else:
+                    for d, occ in responses.items():
+                        save_answer(p_name, p_dept, p_loc, "Section C", d, occ)
+                    st.success("All Disease Data Saved!")
 
     elif current_session == "Section D: Contact":
         st.header("Section D: Contact & Risk (Score 1-5)")
