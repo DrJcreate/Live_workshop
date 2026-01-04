@@ -1033,11 +1033,30 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
 elif view_mode == "⚙️ Data Management" and admin_pwd == ADMIN_PASSWORD:
     st.header("⚙️ Data Management")
     df = get_data()
-    st.dataframe(df, use_container_width=True)
-    del_id = st.number_input("ID to Delete", min_value=1, step=1)
-    if st.button("Delete Row"):
-        if delete_row(del_id):
-            st.rerun()
+
+    if df.empty:
+        st.info("No data available.")
+    else:
+        st.dataframe(df, use_container_width=True)
+
+        # Make sure the table has an 'id' column
+        if "id" not in df.columns:
+            st.error("No 'id' column found in workshop_data table.")
+        else:
+            id_list = df["id"].tolist()
+            selected_ids = st.multiselect(
+                "Select IDs to delete",
+                options=id_list
+            )
+
+            if st.button("Delete selected rows"):
+                if not selected_ids:
+                    st.warning("No rows selected.")
+                else:
+                    for row_id in selected_ids:
+                        delete_row(row_id)
+                    st.success(f"Deleted {len(selected_ids)} rows.")
+                    st.rerun()
 
 # --- WINDOW 3: PARTICIPANT FORM ---
 else:
@@ -1055,7 +1074,10 @@ else:
 
     st.divider()
     
-    if current_session == "Registration":
+        st.divider()
+
+    # --- Registration (always visible) ---
+    with st.expander("Registration", expanded=True):
         st.header("Registration")
         p_desig = st.text_input("Designation")
         p_exp = st.text_input("Years of Experience")
@@ -1063,7 +1085,8 @@ else:
             save_answer(p_name, p_dept, p_loc, "Registration", "Profile", f"{p_desig} | {p_exp}")
             st.success("Registered!")
 
-    elif current_session == "Section B: Spatial":
+    # --- Section B: Spatial ---
+    with st.expander("Section B: Spatial"):
         st.header("Section B: Spatial")
         b1 = st.radio("Grazing Frequency", ["Daily", "4-6 times/week", "2-3 times/week", "Occasionally", "Rarely/Never"])
         b2 = st.radio("Grazing Distance", ["Inside forest", "0-500m", "500m-1km", "1-2km", ">2km"])
@@ -1078,17 +1101,19 @@ else:
             save_answer(p_name, p_dept, p_loc, "Section B", "Sighting Freq", b6)
             st.success("Section B Saved")
 
-    elif current_session == "Section C: Disease":
+    # --- Section C: Disease ---
+    with st.expander("Section C: Disease (Last 3 Years)"):
         st.header("Section C: Disease (Last 3 Years)")
         diseases = ["FMD", "Anthrax", "Rabies", "HS", "PPR", "Brucellosis", "Bovine TB", "Parasitic"]
         for d in diseases:
-            occ = st.radio(f"{d} Outbreak?", ["No", "Yes"], key=d)
+            occ = st.radio(f"{d} Outbreak?", ["No", "Yes"], key=f"C_{d}")
             if st.button(f"Save {d}", key=f"btn_{d}"):
                 save_answer(p_name, p_dept, p_loc, "Section C", d, occ)
                 st.toast(f"{d} Saved")
 
-    elif current_session == "Section D: Contact":
-        st.header("Section D: Contact & Risk (Score 1-5)")
+    # --- Section D: Contact ---
+    with st.expander("Section D: Contact & Risk (Score 1–5)"):
+        st.header("Section D: Contact & Risk (Score 1–5)")
         st.subheader("Direct Physical Contact")
         d1 = st.slider("At water sources", 1, 5, 3)
         d2 = st.slider("At grazing areas", 1, 5, 3)
@@ -1120,11 +1145,12 @@ else:
             save_answer(p_name, p_dept, p_loc, "Section D", "Forest Product Collection", d11)
             st.success("Section D Saved")
 
-    elif current_session == "Section E: Risk":
+    # --- Section E: Risk & Vaccination ---
+    with st.expander("Section E: Risk & Vaccination"):
         st.header("Section E: Risk & Vaccination")
         v_diseases = ["FMD Vac", "Brucella Vac", "HS Vac", "BQ Vac", "LSD Vac"]
         for v in v_diseases:
-            cov = st.select_slider(f"{v} Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"], key=v)
+            cov = st.select_slider(f"{v} Coverage", ["<20%", "20-40%", "40-60%", "60-80%", ">80%"], key=f"E_{v}")
             if st.button(f"Save {v}", key=f"v_{v}"):
                 save_answer(p_name, p_dept, p_loc, "Section E", v, cov)
         
@@ -1141,9 +1167,10 @@ else:
         if st.button("Save Biosecurity Settings"):
             save_answer(p_name, p_dept, p_loc, "Section E", "Quarantine", quarantine)
             save_answer(p_name, p_dept, p_loc, "Section E", "Carcass Disposal", carcass)
-            st.success("E Saved")
+            st.success("Section E Saved")
 
-    elif current_session == "Section F: Mitigation":
+    # --- Section F: Mitigation ---
+    with st.expander("Section F: Recommendations"):
         st.header("Section F: Recommendations")
         f1 = st.radio(
             "Feasibility of buffer zones:",
@@ -1162,7 +1189,8 @@ else:
             save_answer(p_name, p_dept, p_loc, "Section F", "Program Urgency", f2)
             st.success("Section F Saved")
 
-    elif current_session == "Section G: Surveillance":
+    # --- Section G: Surveillance ---
+    with st.expander("Section G: Surveillance & Diagnostics"):
         st.header("Section G: Surveillance & Diagnostics")
 
         st.subheader("G1. Diagnostics")
@@ -1192,3 +1220,4 @@ else:
             save_answer(p_name, p_dept, p_loc, "Section G", "Frequency", g4)
             st.balloons()
             st.success("All data submitted. Thank you!")
+
