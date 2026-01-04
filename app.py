@@ -226,7 +226,7 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
     if df.empty:
         st.info("Waiting for participant data...")
     else:
-        # --- SECTION B: SPATIAL VISUALS ---
+                # --- SECTION B: SPATIAL VISUALS ---
         if current_session == "Section B: Spatial":
             b_df = df[df['session_name'] == 'Section B'].copy()
 
@@ -279,96 +279,6 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                         )
 
                         st.plotly_chart(fig, use_container_width=True)
-
-                st.markdown("### Grazing Distance × Grazing Frequency")
-
-                gf = b_df[b_df["question"] == "Grazing Freq"].copy()
-                gd = b_df[b_df["question"] == "Grazing Distance"].copy()
-
-                if not gf.empty and not gd.empty:
-                    gf = gf.rename(columns={"answer": "Grazing Freq"})
-                    gd = gd.rename(columns={"answer": "Grazing Distance"})
-
-                    merged = gf[["name", "Grazing Freq"]].merge(
-                        gd[["name", "Grazing Distance"]],
-                        on="name",
-                        how="inner"
-                    )
-
-                    heat = (
-                        merged.groupby(["Grazing Distance", "Grazing Freq"])["name"]
-                        .nunique()
-                        .reset_index(name="Participants")
-                    )
-
-                    heat["Grazing Distance"] = pd.Categorical(
-                        heat["Grazing Distance"],
-                        categories=question_order["Grazing Distance"],
-                        ordered=True
-                    )
-
-                    heat["Grazing Freq"] = pd.Categorical(
-                        heat["Grazing Freq"],
-                        categories=question_order["Grazing Freq"],
-                        ordered=True
-                    )
-
-                    heat = heat.sort_values(["Grazing Distance", "Grazing Freq"])
-
-                    fig = px.density_heatmap(
-                        heat,
-                        x="Grazing Distance",
-                        y="Grazing Freq",
-                        z="Participants",
-                        color_continuous_scale="Blues",
-                        title="Number of Participants in Each Grazing Pattern"
-                    )
-
-                    st.plotly_chart(fig, use_container_width=True)
-
-                st.markdown("### Wildlife Sighting × Grazing Frequency")
-
-                sf = b_df[b_df["question"] == "Sighting Freq"].copy()
-
-                if not gf.empty and not sf.empty:
-                    sf = sf.rename(columns={"answer": "Sighting Freq"})
-
-                    merged2 = gf[["name", "Grazing Freq"]].merge(
-                        sf[["name", "Sighting Freq"]],
-                        on="name",
-                        how="inner"
-                    )
-
-                    heat2 = (
-                        merged2.groupby(["Sighting Freq", "Grazing Freq"])["name"]
-                        .nunique()
-                        .reset_index(name="Participants")
-                    )
-
-                    heat2["Sighting Freq"] = pd.Categorical(
-                        heat2["Sighting Freq"],
-                        categories=question_order["Sighting Freq"],
-                        ordered=True
-                    )
-
-                    heat2["Grazing Freq"] = pd.Categorical(
-                        heat2["Grazing Freq"],
-                        categories=question_order["Grazing Freq"],
-                        ordered=True
-                    )
-
-                    heat2 = heat2.sort_values(["Sighting Freq", "Grazing Freq"])
-
-                    fig2 = px.density_heatmap(
-                        heat2,
-                        x="Sighting Freq",
-                        y="Grazing Freq",
-                        z="Participants",
-                        color_continuous_scale="Greens",
-                        title="Wildlife Sighting vs Grazing Frequency"
-                    )
-
-                    st.plotly_chart(fig2, use_container_width=True)
 
         # --- SECTION C: DISEASE VISUALS ---
         elif current_session == "Section C: Disease":
