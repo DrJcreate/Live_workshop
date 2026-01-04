@@ -11,7 +11,11 @@ ADMIN_PASSWORD = "workshop_2025"
 DATABASE_URL = os.environ.get('Database_URL')
 
 # --- DATABASE LOGIC (OPTIMIZED FOR 70+ USERS) ---
-conn = st.connection("postgresql", type="sql")
+# --- DATABASE LOGIC ---
+DATABASE_URL = os.environ.get('Database_URL')
+
+# Pass the URL directly as a keyword argument (url=...)
+conn = st.connection("postgresql", type="sql", url=DATABASE_URL)
 
 def get_data():
     try:
