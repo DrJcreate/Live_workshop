@@ -956,43 +956,52 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                 likert_df = f_df[f_df["question"].isin(
                     ["Buffer Feasibility", "Program Urgency"]
                 )].copy()
-
                 if likert_df.empty:
                     st.info("No mitigation responses to summarise yet.")
                 else:
-                    likert = (
+                # Count unique participants per question and response
+                    likert_counts = (
                         likert_df.groupby(["question", "answer"])["name"]
                         .nunique()
-                        .groupby(level=0)
-                        .apply(lambda x: 100 * x / x.sum())
+                        .reset_index(name="Participants")
                     )
-                    likert = likert.to_frame("Percentage").reset_index()
 
+                    # Total respondents per question
+                    likert_counts["Total"] = likert_counts.groupby("question")["Participants"].transform("sum")
+
+                    # Percentage within each question
+                    likert_counts["Percentage"] = likert_counts["Participants"] / likert_counts["Total"] * 100
+
+                    # Keep only needed columns
+                    likert = likert_counts[["question", "answer", "Percentage"]].copy()
+
+                    # Combined ordering of response options
                     full_order = feasibility_order + [x for x in urgency_order if x not in feasibility_order]
 
                     likert["answer"] = pd.Categorical(
-                        likert["answer"],
-                        categories=full_order,
-                        ordered=True
+                    likert["answer"],
+                    categories=full_order,
+                    ordered=True
                     )
 
                     fig_likert = px.bar(
-                        likert.sort_values(["question", "answer"]),
-                        x="Percentage",
-                        y="question",
-                        color="answer",
-                        barmode="stack",
-                        orientation="h",
-                        title="Summary of feasibility and urgency responses"
+                    likert.sort_values(["question", "answer"]),
+                    x="Percentage",
+                    y="question",
+                    color="answer",
+                    barmode="stack",
+                    orientation="h",
+                    title="Summary of feasibility and urgency responses"
                     )
 
                     fig_likert.update_layout(
-                        xaxis_title="Percentage of respondents",
-                        yaxis_title="Question"
+                    xaxis_title="Percentage of respondents",
+                    yaxis_title="Question"
                     )
 
                     st.plotly_chart(fig_likert, use_container_width=True)
 
+                
         # --- SECTION G: SURVEILLANCE & DIAGNOSTICS VISUALS ---
         elif current_session == "Section G: Surveillance":
             g_df = df[df["session_name"] == "Section G"].copy()
