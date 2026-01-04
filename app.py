@@ -685,8 +685,8 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                         .nunique()
                         .groupby(level=0)
                         .apply(lambda x: 100 * x / x.sum())
-                        .reset_index(name="Percentage")
                     )
+                   shares = shares.to_frame("Percentage").reset_index()
 
                     shares["answer"] = pd.Categorical(
                         shares["answer"],
@@ -956,8 +956,8 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                         .nunique()
                         .groupby(level=0)
                         .apply(lambda x: 100 * x / x.sum())
-                        .reset_index(name="Percentage")
                     )
+                    likert = likert.to_frame("Percentage").reset_index()
 
                     full_order = feasibility_order + [x for x in urgency_order if x not in feasibility_order]
 
