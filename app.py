@@ -1073,9 +1073,6 @@ else:
         p_loc = st.text_input("District and Block")
 
     st.divider()
-    
-        st.divider()
-
     # --- Registration (always visible) ---
     with st.expander("Registration", expanded=True):
         st.header("Registration")
