@@ -555,6 +555,7 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     st.plotly_chart(fig_pred, use_container_width=True)
 
         # --- SECTION E: RISK & VACCINATION VISUALS (FOUR DISEASES ONLY) ---
+# --- SECTION E: RISK & VACCINATION VISUALS (FOUR DISEASES ONLY) ---
         elif current_session == "Section E: Risk":
             e_df = df[df["session_name"] == "Section E"].copy()
 
@@ -584,65 +585,12 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     "60-80%": 4,
                     ">80%": 5
                 }
-                st.subheader("Vaccination coverage by disease")
+
+                st.subheader("Average vaccination coverage score (1 low, 5 high)")
 
                 if vac_df.empty:
                     st.info("No vaccination coverage data recorded yet for FMD, HS, BQ and LSD.")
                 else:
-                    # Count unique participants per disease and coverage band
-                    counts = (
-                        vac_df.groupby(["question", "answer"])["name"]
-                        .nunique()
-                        .reset_index(name="Participants")
-                    )
-
-                    # Total respondents per disease (across all bands)
-                    counts["Total"] = counts.groupby("question")["Participants"].transform("sum")
-
-                    # Percentage within each disease
-                    counts["Percentage"] = counts["Participants"] / counts["Total"] * 100
-
-                    # Keep only what we need for plotting
-                    shares = counts[["question", "answer", "Percentage"]].copy()
-
-                    # Enforce band ordering
-                    shares["answer"] = pd.Categorical(
-                        shares["answer"],
-                        categories=coverage_order,
-                        ordered=True
-                    )
-
-                    # Enforce disease ordering
-                    shares["question"] = pd.Categorical(
-                        shares["question"],
-                        categories=vac_questions,
-                        ordered=True
-                    )
-
-                    shares = shares.sort_values(["question", "answer"])
-
-                    fig_stack = px.bar(
-                        shares,
-                        x="question",
-                        y="Percentage",
-                        color="answer",
-                        barmode="stack",
-                        title="Distribution of vaccination coverage (FMD, HS, BQ, LSD)"
-                    )
-                    fig_stack.update_layout(
-                        xaxis_title="Vaccination type",
-                        yaxis_title="Percentage of respondents"
-                    )
-                    st.plotly_chart(fig_stack, use_container_width=True)
-
-                    with st.expander("Show coverage percentages by disease and band"):
-                        st.dataframe(
-                            shares.sort_values(["question", "answer"]),
-                            use_container_width=True
-                        )
-
-                    st.subheader("Average coverage score (1 low, 5 high)")
-
                     vac_df["CoverageScore"] = vac_df["answer"].map(coverage_score_map)
 
                     avg_cov = (
@@ -860,58 +808,7 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                         showlegend=False
                     )
                     st.plotly_chart(fig_urg, use_container_width=True)
-
-                st.subheader("Summary view (Likert style)")
-
-                likert_df = f_df[f_df["question"].isin(
-                    ["Buffer Feasibility", "Program Urgency"]
-                )].copy()
-                if likert_df.empty:
-                    st.info("No mitigation responses to summarise yet.")
-                else:
-                # Count unique participants per question and response
-                    likert_counts = (
-                        likert_df.groupby(["question", "answer"])["name"]
-                        .nunique()
-                        .reset_index(name="Participants")
-                    )
-
-                    # Total respondents per question
-                    likert_counts["Total"] = likert_counts.groupby("question")["Participants"].transform("sum")
-
-                    # Percentage within each question
-                    likert_counts["Percentage"] = likert_counts["Participants"] / likert_counts["Total"] * 100
-
-                    # Keep only needed columns
-                    likert = likert_counts[["question", "answer", "Percentage"]].copy()
-
-                    # Combined ordering of response options
-                    full_order = feasibility_order + [x for x in urgency_order if x not in feasibility_order]
-
-                    likert["answer"] = pd.Categorical(
-                    likert["answer"],
-                    categories=full_order,
-                    ordered=True
-                    )
-
-                    fig_likert = px.bar(
-                    likert.sort_values(["question", "answer"]),
-                    x="Percentage",
-                    y="question",
-                    color="answer",
-                    barmode="stack",
-                    orientation="h",
-                    title="Summary of feasibility and urgency responses"
-                    )
-
-                    fig_likert.update_layout(
-                    xaxis_title="Percentage of respondents",
-                    yaxis_title="Question"
-                    )
-
-                    st.plotly_chart(fig_likert, use_container_width=True)
-
-                
+                               
         # --- SECTION G: SURVEILLANCE & DIAGNOSTICS VISUALS ---
         elif current_session == "Section G: Surveillance":
             g_df = df[df["session_name"] == "Section G"].copy()
