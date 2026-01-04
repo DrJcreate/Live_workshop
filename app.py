@@ -10,10 +10,23 @@ import logging              # Add this for better error tracking on Render
 ADMIN_PASSWORD = "workshop_2025" 
 DATABASE_URL = os.environ.get('Database_URL')
 
-# --- DATABASE LOGIC (OPTIMIZED FOR 70+ USERS) ---
 # --- DATABASE LOGIC ---
 DATABASE_URL = os.environ.get('Database_URL')
 
+# SQLAlchemy requires 'postgresql://' (Render sometimes provides 'postgres://')
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Create the connection with explicit pooling for high concurrency
+conn = st.connection(
+    "postgresql", 
+    type="sql", 
+    url=DATABASE_URL,
+    pool_size=10,        # Max permanent connections
+    max_overflow=20,     # Temporary extra connections during peak load
+    pool_timeout=30,     # How long to wait for a connection before failing
+    pool_recycle=1800    # Close connections after 30 mins to avoid stale links
+)
 # Pass the URL directly as a keyword argument (url=...)
 conn = st.connection("postgresql", type="sql", url=DATABASE_URL)
 
