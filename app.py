@@ -1090,11 +1090,21 @@ elif view_mode == "⚙️ Data Management" and admin_pwd == ADMIN_PASSWORD:
             st.rerun()
 
 # --- WINDOW 3: PARTICIPANT FORM ---
-# Initialize session state for user info
-    if 'p_name' not in st.session_state: st.session_state.p_name = ""
-    if 'p_dept' not in st.session_state: st.session_state.p_dept = "Select..."
-    if 'p_loc_idx' not in st.session_state: st.session_state.p_loc_idx = 0
+# --- INITIALIZE SESSION STATE ---
+# This ensures the key exists so the app doesn't crash on the first load
+if "user_name" not in st.session_state:
+    st.session_state.user_name = ""
 
+if "user_dept" not in st.session_state:
+    st.session_state.user_dept = "Select..."
+
+# --- WINDOW 3: PARTICIPANT FORM ---
+# Now you can safely use st.session_state.user_name
+p_name = st.text_input("Full Name", value=st.session_state.user_name)
+
+# This part is crucial: update the state whenever the input changes
+if p_name != st.session_state.user_name:
+    st.session_state.user_name = p_name
     p_name = st.text_input("Full Name", value=st.session_state.p_name)
     st.session_state.p_name = p_name # Update state immediately
     
