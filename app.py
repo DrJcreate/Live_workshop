@@ -6,7 +6,7 @@ import plotly.express as px
 import random  # for dummy data generation
 
 # --- CONFIGURATION ---
-ADMIN_PASSWORD = "workshop_2025" 
+ADMIN_PASSWORD = "admin_2026" 
 DATABASE_URL = os.environ.get('Database_URL')
 
 # --- DATABASE LOGIC ---
