@@ -674,26 +674,35 @@ if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
                     "60-80%": 4,
                     ">80%": 5
                 }
-
                 st.subheader("Vaccination coverage by disease")
 
                 if vac_df.empty:
                     st.info("No vaccination coverage data recorded yet for FMD, HS, BQ and LSD.")
                 else:
-                    shares = (
+                    # Count unique participants per disease and coverage band
+                    counts = (
                         vac_df.groupby(["question", "answer"])["name"]
                         .nunique()
-                        .groupby(level=0)
-                        .apply(lambda x: 100 * x / x.sum())
+                        .reset_index(name="Participants")
                     )
-                    shares = shares.to_frame("Percentage").reset_index()
 
+                    # Total respondents per disease (across all bands)
+                    counts["Total"] = counts.groupby("question")["Participants"].transform("sum")
+
+                    # Percentage within each disease
+                    counts["Percentage"] = counts["Participants"] / counts["Total"] * 100
+
+                    # Keep only what we need for plotting
+                    shares = counts[["question", "answer", "Percentage"]].copy()
+
+                    # Enforce band ordering
                     shares["answer"] = pd.Categorical(
                         shares["answer"],
                         categories=coverage_order,
                         ordered=True
                     )
 
+                    # Enforce disease ordering
                     shares["question"] = pd.Categorical(
                         shares["question"],
                         categories=vac_questions,
