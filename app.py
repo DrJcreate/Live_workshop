@@ -1,37 +1,70 @@
 import streamlit as st
 import pandas as pd
-import psycopg2 
 import os
 import plotly.express as px
-import random  # for dummy data generation
+import random
+from sqlalchemy import text  # Add this for secure, pooled queries
+import logging              # Add this for better error tracking on Render
 
 # --- CONFIGURATION ---
 ADMIN_PASSWORD = "workshop_2025" 
 DATABASE_URL = os.environ.get('Database_URL')
 
-# --- DATABASE LOGIC ---
+# --- DATABASE LOGIC (OPTIMIZED FOR 70+ USERS) ---
+conn = st.connection("postgresql", type="sql")
+
 def get_data():
     try:
-        conn = psycopg2.connect(DATABASE_URL)
-        df = pd.read_sql_query("SELECT * FROM workshop_data", conn)
-        conn.close()
+        # ttl=0 ensures we always get fresh data for the live counter/visuals
+        query = "SELECT * FROM workshop_data"
+        df = conn.query(query, ttl=0)
         return df
-    except:
+    except Exception as e:
+        logging.error(f"Database Error: {e}")
         return pd.DataFrame()
 
 def save_answer(name, dept, loc, session, q, ans):
+    if not name:
+        st.error("Please enter your name before saving.")
+        return
     try:
-        conn = psycopg2.connect(DATABASE_URL)
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO workshop_data (name, dept, location_info, session_name, question, answer) VALUES (%s,%s,%s,%s,%s,%s)",
-            (name, dept, loc, session, q, str(ans))
-        )
-        conn.commit()
-        cur.close()
-        conn.close()
-    except:
-        st.error("Error saving to database.")
+        with conn.session as s:
+            sql = text("""
+                INSERT INTO workshop_data (name, dept, location_info, session_name, question, answer) 
+                VALUES (:name, :dept, :loc, :session, :q, :ans)
+            """)
+            s.execute(sql, {
+                "name": name, 
+                "dept": dept, 
+                "loc": loc, 
+                "session": session, 
+                "q": q, 
+                "ans": str(ans)
+            })
+            s.commit()
+    except Exception as e:
+        st.error("Connection busy. Please try clicking save again in a moment.")
+        logging.error(f"Save Error: {e}")
+
+def clear_all_data():
+    try:
+        with conn.session as s:
+            s.execute(text("TRUNCATE TABLE workshop_data RESTART IDENTITY"))
+            s.commit()
+        return True
+    except Exception as e:
+        logging.error(f"Clear Error: {e}")
+        return False
+
+def delete_row(row_id):
+    try:
+        with conn.session as s:
+            s.execute(text("DELETE FROM workshop_data WHERE id = :id"), {"id": row_id})
+            s.commit()
+        return True
+    except Exception as e:
+        logging.error(f"Delete Error: {e}")
+        return False
 
 # --- DUMMY DATA GENERATOR FOR TESTING VISUALS ---
 def run_test_simulation(n_participants: int = 40):
@@ -1040,6 +1073,13 @@ elif view_mode == "⚙️ Data Management" and admin_pwd == ADMIN_PASSWORD:
             st.rerun()
 
 # --- WINDOW 3: PARTICIPANT FORM ---
+if 'user_name' not in st.session_state:
+    st.session_state.user_name = ""
+
+# Then update the text input to use session state
+p_name = st.text_input("Full Name", value=st.session_state.user_name)
+if p_name != st.session_state.user_name:
+    st.session_state.user_name = p_name
 else:
     p_name = st.text_input("Full Name")
     p_dept = st.selectbox("Department", ["Select...", "Forest Department", "Animal Husbandry Department"])
