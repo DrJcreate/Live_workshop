@@ -188,6 +188,13 @@ with col_c:
     st.metric("Live Participants", total_participants)
 
 # --- ADMIN SIDEBAR ---
+st.sidebar.title("🛠️ Controller")
+admin_pwd = st.sidebar.text_input("Password", type="password")
+
+# defaults for non-admin
+view_mode = "Participant Form"
+current_session = "Registration"
+
 if admin_pwd == ADMIN_PASSWORD:
     st.sidebar.success("Admin Access")
 
@@ -197,7 +204,7 @@ if admin_pwd == ADMIN_PASSWORD:
         ["📝 Participant Form", "📊 Visualisations", "⚙️ Data Management"]
     )
     current_session = st.sidebar.radio(
-        "Active Session", 
+        "Active Session",
         [
             "Registration",
             "Section B: Spatial",
@@ -241,12 +248,13 @@ if admin_pwd == ADMIN_PASSWORD:
     st.sidebar.markdown("---")
     st.sidebar.markdown("### Danger zone")
 
+    confirm_wipe = st.sidebar.checkbox(
+        "I confirm I want to delete ALL records",
+        key="confirm_wipe_checkbox"
+    )
+
     if st.sidebar.button("⚠️ Wipe ALL data", key="wipe_all_button"):
-        confirm = st.sidebar.checkbox(
-            "I confirm I want to delete ALL records",
-            key="confirm_wipe_checkbox"
-        )
-        if confirm:
+        if confirm_wipe:
             ok = clear_all_data()
             if ok:
                 st.sidebar.success("All data deleted. Database is now empty.")
