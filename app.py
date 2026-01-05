@@ -6,7 +6,7 @@ import plotly.express as px
 import random  # for dummy data generation
 
 # --- CONFIGURATION ---
-ADMIN_PASSWORD = "admin_2026" 
+ADMIN_PASSWORD = "admin_2027" 
 DATABASE_URL = os.environ.get('Database_URL')
 
 # --- DATABASE LOGIC ---
@@ -188,35 +188,74 @@ with col_c:
     st.metric("Live Participants", total_participants)
 
 # --- ADMIN SIDEBAR ---
-st.sidebar.title("🛠️ Controller")
-admin_pwd = st.sidebar.text_input("Password", type="password")
-
-view_mode = "Participant Form"
-current_session = "Registration"
-
 if admin_pwd == ADMIN_PASSWORD:
     st.sidebar.success("Admin Access")
+
+    # --- BASIC CONTROLS ---
     view_mode = st.sidebar.selectbox(
         "Select Window",
         ["📝 Participant Form", "📊 Visualisations", "⚙️ Data Management"]
     )
     current_session = st.sidebar.radio(
         "Active Session", 
-        ["Registration", "Section B: Spatial", "Section C: Disease", "Section D: Contact", "Section E: Risk", "Section F: Mitigation", "Section G: Surveillance"]
+        [
+            "Registration",
+            "Section B: Spatial",
+            "Section C: Disease",
+            "Section D: Contact",
+            "Section E: Risk",
+            "Section F: Mitigation",
+            "Section G: Surveillance"
+        ]
     )
-    
+
+    # --- DATA EXPORT ---
+    st.sidebar.markdown("### Data export")
     if st.sidebar.button("Download Data"):
         df = get_data()
-        st.sidebar.download_button("CSV Export", df.to_csv(index=False), "workshop_data.csv")
+        st.sidebar.download_button(
+            "CSV Export",
+            df.to_csv(index=False),
+            "workshop_data.csv"
+        )
 
-    # NEW: reset and load dummy data
-    if st.sidebar.button("Reset DB with dummy test data"):
-        if clear_all_data():
-            run_test_simulation()
-            st.sidebar.success("Database cleared and dummy data loaded.")
-            st.rerun()
+    # --- TEST MODE: RESET + DUMMY DATA ---
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### Testing tools")
+
+    test_mode = st.sidebar.checkbox(
+        "Enable test mode (load dummy data)",
+        key="test_mode_checkbox"
+    )
+
+    if test_mode:
+        if st.sidebar.button("Reset DB with dummy test data"):
+            if clear_all_data():
+                run_test_simulation()
+                st.sidebar.success("Database cleared and dummy data loaded.")
+                st.rerun()
+            else:
+                st.sidebar.error("Failed to clear database. Check DB connection.")
+
+    # --- DANGER ZONE: HARD WIPE ---
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### Danger zone")
+
+    if st.sidebar.button("⚠️ Wipe ALL data", key="wipe_all_button"):
+        confirm = st.sidebar.checkbox(
+            "I confirm I want to delete ALL records",
+            key="confirm_wipe_checkbox"
+        )
+        if confirm:
+            ok = clear_all_data()
+            if ok:
+                st.sidebar.success("All data deleted. Database is now empty.")
+                st.rerun()
+            else:
+                st.sidebar.error("Could not clear database. Check DB connection.")
         else:
-            st.sidebar.error("Failed to clear database. Check DB connection.")
+            st.sidebar.warning("Tick the confirmation box first.")
+
 
 # --- WINDOW 1: VISUALISATIONS ---
 if view_mode == "📊 Visualisations" and admin_pwd == ADMIN_PASSWORD:
